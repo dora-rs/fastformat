@@ -64,8 +64,6 @@ jobs:
             target: x86
           - runner: ubuntu-latest
             target: aarch64
-          - runner: ubuntu-latest
-            target: armv7
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -83,6 +81,47 @@ jobs:
         with:
           name: wheels-musllinux-${{ matrix.platform.target }}
           path: dist
+
+  musleabi:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform:
+          [
+            {
+              target: "armv7-unknown-linux-musleabihf",
+              image_tag: "armv7-musleabihf",
+            },
+          ]
+    container:
+      image: docker://messense/rust-musl-cross:${{ matrix.platform.image_tag }}
+      env:
+        CFLAGS_armv7_unknown_linux_musleabihf: "-mfpu=vfpv3-d16"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+      - name: Build Wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          manylinux: auto
+          container: off
+          args: --release -o dist
+          working-directory: apis/python/node
+      - name: Upload wheels
+        uses: actions/upload-artifact@v3
+        with:
+          name: wheels-musllinux-${{ matrix.platform.target }}
+          path: apis/python/node/dist
+      - name: Upload to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: apis/python/node/dist/*
+          tag: ${{ github.ref }}
+          file_glob: true
 
   windows:
     runs-on: ${{ matrix.platform.runner }}
