@@ -109,19 +109,11 @@ jobs:
           manylinux: auto
           container: off
           args: --release -o dist
-          working-directory: apis/python/node
       - name: Upload wheels
         uses: actions/upload-artifact@v3
         with:
           name: wheels-musllinux-${{ matrix.platform.target }}
-          path: apis/python/node/dist
-      - name: Upload to release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: apis/python/node/dist/*
-          tag: ${{ github.ref }}
-          file_glob: true
+          path: dist
 
   windows:
     runs-on: ${{ matrix.platform.runner }}
