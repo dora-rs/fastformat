@@ -1,0 +1,31 @@
+name: Release
+
+permissions:
+  contents: write
+
+on:
+  release:
+    types:
+      - "published"
+  workflow_dispatch:
+
+jobs:
+  cargo-release:
+    name: "Cargo Release"
+
+    strategy:
+      matrix:
+        platform: [ubuntu-20.04]
+      fail-fast: false
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: r7kamura/rust-problem-matchers@v1.1.0
+      - name: "Publish packages on `crates.io`"
+        if: runner.os == 'Linux'
+        run: |
+
+          # Publish libraries crates
+          cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
