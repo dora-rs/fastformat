@@ -101,7 +101,7 @@ impl Image<u8> {
     pub fn from_arrow_array(arrow_array: UnionArray) -> Self
     {
         unsafe {
-            let mut data = mem::ManuallyDrop::new(arrow_array);
+            let data = mem::ManuallyDrop::new(arrow_array);
             let shape = data.child(0).as_any().downcast_ref::<UInt32Array>().unwrap();
             let width = shape.value(0);
             let height = shape.value(1);
