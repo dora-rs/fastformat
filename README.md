@@ -17,3 +17,22 @@ Numpy, or Arrow, without unnecessary copies.
 
 - **Simplicity**: The goal is not to create yet another library for creating formats to store/process data. The aim here
   is to create a simple interface to wrap data from one type and convert it to another.
+
+## DataTypes
+
+- **Image** as a **UnionArray**,
+    - Field 0: Uint32Array [width, height] (e.g [1280, 720])
+    - Field 1: StringArray [encoding] (e.g ["RGB8"])
+    - Field 2: UintXArray [data] (e.g [0, 255, 0, 255, 0, 255, ...])
+    - Field 3 (Optional): StringArray [name] (e.g ["image.front_camera"])
+
+- **ImageSequence** as a **UnionArray**,
+    - Field 0: StringArray [path_to_frames] (e.g ["path/to/frames/"])
+    - Field 1: Uint32Array [framerate] (e.g [30])
+    - Field 2 (Optional): StringArray [name] (e.g ["video.front_camera"])
+
+- **BBoxes** as a **UnionArray**,
+    - Field 0: Int32Array [data] (e.g [x1, y1, x2, y2, x1, y1, x2, y2, ...])
+    - Field 1: Float32Array [confidence] (e.g [0.9, 0.8, ...])
+    - Field 2: StringArray [label] (e.g ["car", "person", ...])
+    - Field 3: StringArray [encoding] (e.g ["XYXY"] or ["XYWH"])
