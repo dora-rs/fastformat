@@ -24,12 +24,12 @@ Numpy, or Arrow, without unnecessary copies.
     - Field 0: Uint32Array [width, height] (e.g [1280, 720])
     - Field 1: StringArray [encoding] (e.g ["RGB8"])
     - Field 2: UintXArray [data] (e.g [0, 255, 0, 255, 0, 255, ...])
-    - Field 3 (Optional): StringArray [name] (e.g ["image.front_camera"])
+    - Field 3: StringArray [name] (e.g ["image.front_camera"])
 
 - **ImageSequence** as a **UnionArray**,
     - Field 0: StringArray [path_to_frames] (e.g ["path/to/frames/"])
     - Field 1: Uint32Array [framerate] (e.g [30])
-    - Field 2 (Optional): StringArray [name] (e.g ["video.front_camera"])
+    - Field 2: StringArray [name] (e.g ["video.front_camera"])
 
 - **BBoxes** as a **UnionArray**,
     - Field 0: Int32Array [data] (e.g [x1, y1, x2, y2, x1, y1, x2, y2, ...])

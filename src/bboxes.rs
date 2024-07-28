@@ -1,18 +1,7 @@
-use crate::image::Encoding::{BGR8, RGB8};
-use arrow::array::{StringArray, UInt32Array, UInt8Array, UnionArray};
-use arrow::buffer::ScalarBuffer;
-use arrow::datatypes::{DataType, Field, UnionFields};
-use arrow::error::ArrowError;
-use ndarray::{Array, Ix3};
-use std::cmp::PartialEq;
-use std::mem;
-use std::string::ToString;
-use std::sync::Arc;
-
 #[derive(PartialEq)]
 pub enum Encoding {
-    BGR8,
-    RGB8,
+    XYXY,
+    XYWH,
     Unknown,
 }
 
