@@ -37,6 +37,6 @@ Numpy, or Arrow, without unnecessary copies.
     - Field 2: StringArray [label] (e.g ["car", "person", ...])
     - Field 3: StringArray [encoding] (e.g ["XYXY"] or ["XYWH"])
 
-- **LabelledValues** as a **StructArray*,
+- **LabelledValues** as a **StructArray**,
     - Field "labels": StringArray [labels] (e.g ["head", "neck", ...])
     - Field "values": XYZWArray [values] (e.g [a, b, c, d, ...])
