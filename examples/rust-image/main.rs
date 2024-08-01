@@ -2,26 +2,67 @@ extern crate fastformat;
 
 use fastformat::image::Image;
 
+fn camera_read() -> ndarray::Array<u8, ndarray::Ix3> {
+    // Dummy camera read
+
+    let flat_image = (1..28).collect::<Vec<u8>>();
+    println!(
+        "Generate a camera image at address: {:?}",
+        flat_image.as_ptr()
+    );
+
+    let image = Image::new_bgr8(flat_image, 3, 3, None);
+
+    return image.to_nd_array();
+}
+
+fn image_show(_frame: ndarray::ArrayView<u8, ndarray::Ix3>) {
+    // Dummy image show
+
+    println!("Showing an image.");
+}
+
+fn send_output(arrow_array: arrow::array::UnionArray) {
+    // Dummy send output
+
+    let image = Image::from_arrow(arrow_array);
+
+    println!(
+        "Sending an image to dataflow. Image address is: {:?}",
+        image.as_ptr()
+    );
+}
+
 fn main() {
-    let pixels = (0..27).collect::<Vec<u8>>();
-    println!("{:?}", pixels.as_ptr());
+    // Read OpenCV Camera, default is nd_array BGR8
+    let frame = camera_read();
 
-    let rgb8_image = Image::new_rgb8(pixels, 3, 3, None);
-    println!("{:?}", rgb8_image.as_ptr());
+    let image = Image::from_bgr8_nd_array(frame, Some("OpenCV Camera 0"));
 
-    let bgr8_image = rgb8_image.to_bgr();
-    println!("{:?}", bgr8_image.as_ptr());
+    // Convert to RGB8, apply some filter (Black and White).
+    let mut frame = image.to_rgb().to_nd_array();
 
-    let rgb8_image = bgr8_image.to_rgb();
-    println!("{:?}", rgb8_image.as_ptr());
+    for i in 0..frame.shape()[0] {
+        for j in 0..frame.shape()[1] {
+            let mean =
+                (frame[[i, j, 0]] as f32 + frame[[i, j, 1]] as f32 + frame[[i, j, 2]] as f32) / 3.0;
 
-    let rgb8_nd_array = rgb8_image.to_nd_array();
-    println!("{:?}", rgb8_nd_array.as_ptr());
+            if mean > 128.0 {
+                frame[[i, j, 0]] = 255;
+                frame[[i, j, 1]] = 255;
+                frame[[i, j, 2]] = 255;
+            } else {
+                frame[[i, j, 0]] = 0;
+                frame[[i, j, 1]] = 0;
+                frame[[i, j, 2]] = 0;
+            }
+        }
+    }
 
-    let bgr8_image = Image::from_rgb8_nd_array(rgb8_nd_array, None).to_bgr();
-    println!("{:?}", bgr8_image.as_ptr());
+    let image = Image::from_rgb8_nd_array(frame, Some("OpenCV Camera 0 Black and White"));
 
-    let arrow_array = bgr8_image.to_arrow();
-    let bgr8_image = Image::from_arrow(arrow_array).to_bgr();
-    println!("{:?}", bgr8_image.as_ptr());
+    // Plot the image, you may only need a nd array view
+    image_show(image.nd_array_view());
+
+    send_output(image.to_arrow());
 }

@@ -1,6 +1,8 @@
-use std::collections::HashMap;
+use arrow::datatypes::DataType;
 
-pub fn look_up_table(fields: &arrow::datatypes::UnionFields) -> HashMap<String, i8> {
+use std::{collections::HashMap, sync::Arc};
+
+pub fn union_look_up_table(fields: &arrow::datatypes::UnionFields) -> HashMap<String, i8> {
     let mut result = HashMap::new();
 
     for field in fields.iter() {
@@ -12,12 +14,24 @@ pub fn look_up_table(fields: &arrow::datatypes::UnionFields) -> HashMap<String, 
     return result;
 }
 
-pub fn retrieve_child<'a, T: 'static>(
+pub fn column_by_name<'a, T: 'static>(
     array: &'a arrow::array::UnionArray,
-    field: String,
+    field: &'a str,
     look_up_table: &'a HashMap<String, i8>,
 ) -> &'a T {
-    let index = look_up_table.get(&field).unwrap().clone();
+    let index = look_up_table.get(field).unwrap().clone();
 
     return array.child(index).as_any().downcast_ref::<T>().unwrap();
+}
+
+pub fn union_field(
+    index: i8,
+    name: &str,
+    data_type: DataType,
+    nullable: bool,
+) -> (i8, Arc<arrow::datatypes::Field>) {
+    (
+        index,
+        Arc::new(arrow::datatypes::Field::new(name, data_type, nullable)),
+    )
 }
