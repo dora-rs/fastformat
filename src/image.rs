@@ -1,204 +1,285 @@
-use crate::image::Encoding::{BGR8, RGB8};
-use arrow::array::{StringArray, UInt32Array, UInt8Array, UnionArray};
-use arrow::buffer::ScalarBuffer;
-use arrow::datatypes::{DataType, Field, UnionFields};
-use arrow::error::ArrowError;
-use ndarray::{Array, Ix3};
-use std::cmp::PartialEq;
+use crate::arrow::{look_up_table, retrieve_child};
 use std::mem;
-use std::string::ToString;
 use std::sync::Arc;
 
 #[derive(PartialEq)]
-pub enum Encoding {
+enum Encoding {
     BGR8,
     RGB8,
     Unknown,
 }
 
 impl Encoding {
-    pub fn to_string(&self) -> String {
+    fn to_string(&self) -> String {
         match self {
-            BGR8 => "bgr8".to_string(),
-            RGB8 => "rgb8".to_string(),
-            Encoding::Unknown => "unknown".to_string(),
+            Self::BGR8 => "BGR8".to_string(),
+            Self::RGB8 => "RGB8".to_string(),
+            Self::Unknown => "unknown".to_string(),
         }
     }
 
-    pub fn from_string(encoding: &str) -> Self {
+    fn from_string(encoding: &str) -> Self {
         match encoding {
-            "bgr8" => BGR8,
-            "rgb8" => RGB8,
-            _ => Encoding::Unknown,
+            "BGR8" => Self::BGR8,
+            "RGB8" => Self::RGB8,
+            _ => Self::Unknown,
         }
     }
 }
 
 pub struct Image<T> {
+    pixels: Vec<T>,
+
     width: u32,
     height: u32,
-    base_encoding: Encoding,
-    data: Vec<T>,
-    name: String,
+    encoding: Encoding,
+
+    name: Option<String>,
 }
 
 impl<T> Image<T> {
-    pub fn as_ptr(&self) -> *const T {
-        self.data.as_ptr()
-    }
-
-    pub fn from_flat(
-        data: Vec<T>,
-        width: u32,
-        height: u32,
-        base_encoding: Encoding,
-        name: String,
-    ) -> Self {
-        Image {
-            width,
-            height,
-            base_encoding,
-            data,
-            name,
-        }
-    }
-
-    pub fn from_nd_array(nd_array: Array<T, Ix3>, base_encoding: Encoding, name: String) -> Self {
-        let shape = nd_array.shape();
-
-        let width = shape[1] as u32;
-        let height = shape[0] as u32;
-        let channels = shape[2] as u32;
-
-        let flat_size = (width * height * channels) as usize;
-
-        let reshaped_nd_array = nd_array.into_shape(flat_size).unwrap();
-        let data = reshaped_nd_array.into_raw_vec();
-
-        Image {
-            width,
-            height,
-            base_encoding,
-            data,
-            name,
-        }
-    }
-
-    pub fn to_flat(self) -> Vec<T> {
-        self.data
-    }
-
-    pub fn to_nd_array(self, encoding: Encoding) -> Result<Array<T, Ix3>, ()> {
-        if (self.base_encoding == BGR8 && encoding == RGB8)
-            || (self.base_encoding == RGB8 && encoding == BGR8)
-        {
-            let mut array: Array<T, Ix3> =
-                Array::from_shape_vec((self.height as usize, self.width as usize, 3), self.data)
-                    .unwrap();
-            array.swap_axes(2, 0);
-
-            return Ok(array);
-        }
-
-        if self.base_encoding == encoding
-            && (self.base_encoding == BGR8 || self.base_encoding == RGB8)
-        {
-            let array: Array<T, Ix3> =
-                Array::from_shape_vec((self.height as usize, self.width as usize, 3), self.data)
-                    .unwrap();
-            return Ok(array);
-        }
-
-        Err(())
+    pub fn as_ptr(&self) -> *const u8 {
+        self.pixels.as_ptr() as *const u8
     }
 }
 
 impl Image<u8> {
-    pub fn from_arrow_array(arrow_array: UnionArray) -> Self {
+    pub fn new_rgb8(pixels: Vec<u8>, width: u32, height: u32, name: Option<String>) -> Self {
+        Self {
+            pixels,
+            width,
+            height,
+            encoding: Encoding::RGB8,
+            name,
+        }
+    }
+
+    pub fn new_bgr8(pixels: Vec<u8>, width: u32, height: u32, name: Option<String>) -> Self {
+        Self {
+            pixels,
+            width,
+            height,
+            encoding: Encoding::BGR8,
+            name,
+        }
+    }
+
+    pub fn to_bgr(self) -> Self {
+        if self.encoding == Encoding::BGR8 {
+            return self;
+        }
+
+        let mut pixels = self.pixels;
+
+        for i in (0..pixels.len()).step_by(3) {
+            pixels.swap(i, i + 2);
+        }
+
+        Self {
+            pixels,
+            width: self.width,
+            height: self.height,
+            encoding: Encoding::BGR8,
+            name: self.name,
+        }
+    }
+
+    pub fn to_rgb(self) -> Self {
+        if self.encoding == Encoding::RGB8 {
+            return self;
+        }
+
+        let mut pixels = self.pixels;
+
+        for i in (0..pixels.len()).step_by(3) {
+            pixels.swap(i, i + 2);
+        }
+
+        Self {
+            pixels,
+            width: self.width,
+            height: self.height,
+            encoding: Encoding::RGB8,
+            name: self.name,
+        }
+    }
+}
+
+impl Image<u8> {
+    pub fn from_rgb8_nd_array(
+        array: ndarray::Array<u8, ndarray::Ix3>,
+        name: Option<String>,
+    ) -> Self {
+        let width = array.shape()[1] as u32;
+        let height = array.shape()[0] as u32;
+
+        let flat_size = (width * height * 3) as usize;
+
+        let reshaped_nd_array = array.into_shape(flat_size).unwrap();
+        let pixels = reshaped_nd_array.into_raw_vec();
+
+        Self::new_rgb8(pixels, width, height, name)
+    }
+
+    pub fn from_bgr8_nd_array(
+        array: ndarray::Array<u8, ndarray::Ix3>,
+        name: Option<String>,
+    ) -> Self {
+        let width = array.shape()[1] as u32;
+        let height = array.shape()[0] as u32;
+
+        let flat_size = (width * height * 3) as usize;
+
+        let reshaped_nd_array = array.into_shape(flat_size).unwrap();
+        let pixels = reshaped_nd_array.into_raw_vec();
+
+        Self::new_bgr8(pixels, width, height, name)
+    }
+
+    pub fn to_nd_array(self) -> ndarray::Array<u8, ndarray::Ix3> {
+        let reshaped_nd_array: ndarray::Array<u8, ndarray::Ix3> = ndarray::Array::from_shape_vec(
+            (self.height as usize, self.width as usize, 3),
+            self.pixels,
+        )
+        .unwrap();
+
+        reshaped_nd_array
+    }
+
+    pub fn view(&self) -> ndarray::ArrayView3<u8> {
+        let reshaped_nd_array: ndarray::ArrayView3<u8> = ndarray::ArrayView3::from_shape(
+            (self.height as usize, self.width as usize, 3),
+            &self.pixels,
+        )
+        .unwrap();
+
+        reshaped_nd_array
+    }
+}
+
+impl Image<u8> {
+    pub fn from_arrow(array: arrow::array::UnionArray) -> Self {
+        use arrow::array::Array;
+
+        let union_fields = match array.data_type() {
+            arrow::datatypes::DataType::Union(fields, ..) => fields,
+            _ => panic!("Expected data_type to be arrow::datatypes::DataType::Union"),
+        };
+
+        let look_up_table = look_up_table(&union_fields);
+
+        let width = retrieve_child::<arrow::array::UInt32Array>(
+            &array,
+            "width".to_string(),
+            &look_up_table,
+        )
+        .value(0);
+        let height = retrieve_child::<arrow::array::UInt32Array>(
+            &array,
+            "height".to_string(),
+            &look_up_table,
+        )
+        .value(0);
+        let encoding = Encoding::from_string(
+            &retrieve_child::<arrow::array::StringArray>(
+                &array,
+                "encoding".to_string(),
+                &look_up_table,
+            )
+            .value(0),
+        );
+
+        let name =
+            retrieve_child::<arrow::array::StringArray>(&array, "name".to_string(), &look_up_table)
+                .value(0)
+                .to_string();
+
         unsafe {
-            let data = mem::ManuallyDrop::new(arrow_array);
-            let shape = data
-                .child(0)
-                .as_any()
-                .downcast_ref::<UInt32Array>()
-                .unwrap();
-            let width = shape.value(0);
-            let height = shape.value(1);
+            let array = mem::ManuallyDrop::new(array);
+            let pixels = retrieve_child::<arrow::array::UInt8Array>(
+                &array,
+                "pixels".to_string(),
+                &look_up_table,
+            );
 
-            let base_encoding = data
-                .child(1)
-                .as_any()
-                .downcast_ref::<StringArray>()
-                .unwrap()
-                .value(0);
-            let name = data
-                .child(3)
-                .as_any()
-                .downcast_ref::<StringArray>()
-                .unwrap()
-                .value(0);
+            let ptr = pixels.values().as_ptr();
+            let len = pixels.len();
 
-            if base_encoding != "bgr8" && base_encoding != "rgb8" {
-                return Image {
-                    width,
-                    height,
-                    base_encoding: Encoding::Unknown,
-                    data: vec![],
-                    name: name.to_string(),
-                };
-            }
+            let pixels = Vec::from_raw_parts(ptr as *mut u8, len, len);
 
-            let ptr = data
-                .child(2)
-                .as_any()
-                .downcast_ref::<UInt8Array>()
-                .unwrap()
-                .values()
-                .as_ptr();
-            let len = data
-                .child(2)
-                .as_any()
-                .downcast_ref::<UInt8Array>()
-                .unwrap()
-                .len();
-
-            let data = Vec::from_raw_parts(ptr as *mut u8, len, len);
-
-            return Image {
-                width,
-                height,
-                base_encoding: Encoding::from_string(base_encoding),
-                data,
-                name: name.to_string(),
+            return match encoding {
+                Encoding::RGB8 => Self::new_rgb8(pixels, width, height, Some(name)),
+                Encoding::BGR8 => Self::new_bgr8(pixels, width, height, Some(name)),
+                Encoding::Unknown => panic!("Unknown encoding"),
             };
         }
     }
 
-    pub fn to_arrow_array(self) -> Result<UnionArray, ArrowError> {
-        let shape = UInt32Array::from([self.width, self.height].to_vec());
-        let encoding = StringArray::from([self.base_encoding.to_string()].to_vec());
-        let data = UInt8Array::from(self.data);
-        let name = StringArray::from([self.name].to_vec());
+    pub fn to_arrow(self) -> arrow::array::UnionArray {
+        let pixels = arrow::array::UInt8Array::from(self.pixels);
 
-        let type_ids = [].into_iter().collect::<ScalarBuffer<i8>>();
-        let offsets = [].into_iter().collect::<ScalarBuffer<i32>>();
+        let width = arrow::array::UInt32Array::from(vec![self.width; 1]);
+        let height = arrow::array::UInt32Array::from(vec![self.height; 1]);
+        let encoding = arrow::array::StringArray::from(vec![self.encoding.to_string(); 1]);
+
+        let name = arrow::array::StringArray::from(vec![self.name.unwrap_or("".to_string()); 1]);
+
+        let type_ids = [].into_iter().collect::<arrow::buffer::ScalarBuffer<i8>>();
+        let offsets = [].into_iter().collect::<arrow::buffer::ScalarBuffer<i32>>();
 
         let union_fields = [
-            (0, Arc::new(Field::new("Shape", DataType::UInt32, false))),
-            (1, Arc::new(Field::new("Encoding", DataType::Utf8, false))),
-            (2, Arc::new(Field::new("Data", DataType::UInt8, false))),
-            (3, Arc::new(Field::new("Name", DataType::Utf8, false))),
+            (
+                0,
+                Arc::new(arrow::datatypes::Field::new(
+                    "pixels",
+                    arrow::datatypes::DataType::UInt8,
+                    false,
+                )),
+            ),
+            (
+                1,
+                Arc::new(arrow::datatypes::Field::new(
+                    "width",
+                    arrow::datatypes::DataType::UInt32,
+                    false,
+                )),
+            ),
+            (
+                2,
+                Arc::new(arrow::datatypes::Field::new(
+                    "height",
+                    arrow::datatypes::DataType::UInt32,
+                    false,
+                )),
+            ),
+            (
+                3,
+                Arc::new(arrow::datatypes::Field::new(
+                    "encoding",
+                    arrow::datatypes::DataType::Utf8,
+                    false,
+                )),
+            ),
+            (
+                4,
+                Arc::new(arrow::datatypes::Field::new(
+                    "name",
+                    arrow::datatypes::DataType::Utf8,
+                    true,
+                )),
+            ),
         ]
         .into_iter()
-        .collect::<UnionFields>();
+        .collect::<arrow::datatypes::UnionFields>();
 
         let children: Vec<Arc<dyn arrow::array::Array>> = vec![
-            Arc::new(shape),
+            Arc::new(pixels),
+            Arc::new(width),
+            Arc::new(height),
             Arc::new(encoding),
-            Arc::new(data),
             Arc::new(name),
         ];
 
-        UnionArray::try_new(union_fields, type_ids, Some(offsets), children)
+        arrow::array::UnionArray::try_new(union_fields, type_ids, Some(offsets), children).unwrap()
     }
 }

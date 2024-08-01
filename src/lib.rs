@@ -1,8 +1,8 @@
 use pyo3::prelude::*;
 
+pub mod arrow;
+
 pub mod image;
-pub mod image_sequence;
-pub mod bboxes;
 
 /// Formats the sum of two numbers as string.
 #[pyfunction]
