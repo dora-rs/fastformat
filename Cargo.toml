@@ -14,3 +14,4 @@ crate-type = ["cdylib", "lib"]
 pyo3 = "0.21.1"
 ndarray = "0.15.4"
 arrow = "52.1.0"
+eyre = "0.6.12"

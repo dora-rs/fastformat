@@ -13,7 +13,7 @@ fn camera_read() -> ndarray::Array<u8, ndarray::Ix3> {
 
     let image = Image::new_bgr8(flat_image, 3, 3, None);
 
-    return image.to_nd_array();
+    return image.to_nd_array().unwrap();
 }
 
 fn image_show(_frame: ndarray::ArrayView<u8, ndarray::Ix3>) {
@@ -25,7 +25,7 @@ fn image_show(_frame: ndarray::ArrayView<u8, ndarray::Ix3>) {
 fn send_output(arrow_array: arrow::array::UnionArray) {
     // Dummy send output
 
-    let image = Image::from_arrow(arrow_array);
+    let image = Image::from_arrow(arrow_array).unwrap();
 
     println!(
         "Sending an image to dataflow. Image address is: {:?}",
@@ -37,10 +37,10 @@ fn main() {
     // Read OpenCV Camera, default is nd_array BGR8
     let frame = camera_read();
 
-    let image = Image::from_bgr8_nd_array(frame, Some("OpenCV Camera 0"));
+    let image = Image::from_bgr8_nd_array(frame, Some("camera.left"));
 
     // Convert to RGB8, apply some filter (Black and White).
-    let mut frame = image.to_rgb().to_nd_array();
+    let mut frame = image.to_rgb().to_nd_array().unwrap();
 
     for i in 0..frame.shape()[0] {
         for j in 0..frame.shape()[1] {
@@ -59,10 +59,10 @@ fn main() {
         }
     }
 
-    let image = Image::from_rgb8_nd_array(frame, Some("OpenCV Camera 0 Black and White"));
+    let image = Image::from_rgb8_nd_array(frame, Some("camera.left.baw"));
 
     // Plot the image, you may only need a nd array view
-    image_show(image.nd_array_view());
+    image_show(image.nd_array_view().unwrap());
 
-    send_output(image.to_arrow());
+    send_output(image.to_arrow().unwrap());
 }

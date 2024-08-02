@@ -2,6 +2,8 @@ use arrow::datatypes::DataType;
 
 use std::{collections::HashMap, sync::Arc};
 
+use eyre::{ContextCompat, Result};
+
 pub fn union_look_up_table(fields: &arrow::datatypes::UnionFields) -> HashMap<String, i8> {
     let mut result = HashMap::new();
 
@@ -18,10 +20,17 @@ pub fn column_by_name<'a, T: 'static>(
     array: &'a arrow::array::UnionArray,
     field: &'a str,
     look_up_table: &'a HashMap<String, i8>,
-) -> &'a T {
-    let index = look_up_table.get(field).unwrap().clone();
+) -> Result<&'a T> {
+    let index = look_up_table
+        .get(field)
+        .cloned()
+        .wrap_err(format!("Couldn't get field {} from look_up table", field))?;
 
-    return array.child(index).as_any().downcast_ref::<T>().unwrap();
+    return array
+        .child(index)
+        .as_any()
+        .downcast_ref::<T>()
+        .wrap_err(format!("Couldn't downcast field {} to type T", field));
 }
 
 pub fn union_field(

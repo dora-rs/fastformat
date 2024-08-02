@@ -2,11 +2,12 @@ use crate::arrow::{column_by_name, union_field, union_look_up_table};
 
 use std::{mem, sync::Arc};
 
+use eyre::{Context, Report, Result};
+
 #[derive(PartialEq, Debug)]
 enum Encoding {
     BGR8,
     RGB8,
-    Unknown,
 }
 
 impl Encoding {
@@ -14,15 +15,17 @@ impl Encoding {
         match self {
             Self::BGR8 => "BGR8".to_string(),
             Self::RGB8 => "RGB8".to_string(),
-            Self::Unknown => "unknown".to_string(),
         }
     }
 
-    fn from_string(encoding: &str) -> Self {
+    fn from_string(encoding: &str) -> Result<Self> {
         match encoding {
-            "BGR8" => Self::BGR8,
-            "RGB8" => Self::RGB8,
-            _ => Self::Unknown,
+            "BGR8" => Ok(Self::BGR8),
+            "RGB8" => Ok(Self::RGB8),
+            _ => Err(Report::msg(format!(
+                "Encoding {} is not supported.",
+                encoding
+            ))),
         }
     }
 }
@@ -41,6 +44,51 @@ pub struct Image<T> {
 impl<T> Image<T> {
     pub fn as_ptr(&self) -> *const u8 {
         self.pixels.as_ptr() as *const u8
+    }
+
+    pub fn to_nd_array(self) -> Result<ndarray::Array<T, ndarray::Ix3>> {
+        match self.encoding {
+            Encoding::BGR8 => ndarray::Array::from_shape_vec(
+                (self.height as usize, self.width as usize, 3),
+                self.pixels,
+            )
+            .wrap_err("Failed to reshape pixels into ndarray: width, height and BGR8 encoding doesn't match pixels data length."),
+            Encoding::RGB8 => ndarray::Array::from_shape_vec(
+                (self.height as usize, self.width as usize, 3),
+                self.pixels,
+            )
+            .wrap_err("Failed to reshape pixels into ndarray: width, height and RGB8 encoding doesn't match pixels data length."),
+        }
+    }
+
+    pub fn nd_array_view(&self) -> Result<ndarray::ArrayView<T, ndarray::Ix3>> {
+        match self.encoding {
+            Encoding::BGR8 => ndarray::ArrayView::from_shape(
+                (self.height as usize, self.width as usize, 3),
+                &self.pixels,
+            )
+            .wrap_err("Failed to reshape pixels into ndarray: width, height and BGR8 encoding doesn't match pixels data length."),
+            Encoding::RGB8 => ndarray::ArrayView::from_shape(
+                (self.height as usize, self.width as usize, 3),
+                &self.pixels,
+            )
+            .wrap_err("Failed to reshape pixels into ndarray: width, height and RGB8 encoding doesn't match pixels data length."),
+        }
+    }
+
+    pub fn nd_array_view_mut(&mut self) -> Result<ndarray::ArrayViewMut<T, ndarray::Ix3>> {
+        match self.encoding {
+            Encoding::BGR8 => ndarray::ArrayViewMut::from_shape(
+                (self.height as usize, self.width as usize, 3),
+                &mut self.pixels,
+            )
+            .wrap_err("Failed to reshape pixels into ndarray: width, height and BGR8 encoding doesn't match pixels data length."),
+            Encoding::RGB8 => ndarray::ArrayViewMut::from_shape(
+                (self.height as usize, self.width as usize, 3),
+                &mut self.pixels,
+            )
+            .wrap_err("Failed to reshape pixels into ndarray: width, height and RGB8 encoding doesn't match pixels data length."),
+        }
     }
 }
 
@@ -111,10 +159,7 @@ impl Image<u8> {
         let width = array.shape()[1] as u32;
         let height = array.shape()[0] as u32;
 
-        let flat_size = (width * height * 3) as usize;
-
-        let reshaped_nd_array = array.into_shape(flat_size).unwrap();
-        let pixels = reshaped_nd_array.into_raw_vec();
+        let pixels = array.into_raw_vec();
 
         Self::new_rgb8(pixels, width, height, name)
     }
@@ -123,56 +168,35 @@ impl Image<u8> {
         let width = array.shape()[1] as u32;
         let height = array.shape()[0] as u32;
 
-        let flat_size = (width * height * 3) as usize;
-
-        let reshaped_nd_array = array.into_shape(flat_size).unwrap();
-        let pixels = reshaped_nd_array.into_raw_vec();
+        let pixels = array.into_raw_vec();
 
         Self::new_bgr8(pixels, width, height, name)
-    }
-
-    pub fn to_nd_array(self) -> ndarray::Array<u8, ndarray::Ix3> {
-        let reshaped_nd_array: ndarray::Array<u8, ndarray::Ix3> = ndarray::Array::from_shape_vec(
-            (self.height as usize, self.width as usize, 3),
-            self.pixels,
-        )
-        .unwrap();
-
-        reshaped_nd_array
-    }
-
-    pub fn nd_array_view(&self) -> ndarray::ArrayView3<u8> {
-        let reshaped_nd_array: ndarray::ArrayView3<u8> = ndarray::ArrayView3::from_shape(
-            (self.height as usize, self.width as usize, 3),
-            &self.pixels,
-        )
-        .unwrap();
-
-        reshaped_nd_array
     }
 }
 
 impl Image<u8> {
-    pub fn from_arrow(array: arrow::array::UnionArray) -> Self {
+    pub fn from_arrow(array: arrow::array::UnionArray) -> Result<Self> {
         use arrow::array::Array;
 
         let union_fields = match array.data_type() {
             arrow::datatypes::DataType::Union(fields, ..) => fields,
-            _ => panic!("Expected data_type to be arrow::datatypes::DataType::Union"),
+            _ => {
+                return Err(Report::msg("UnionArray has invalid data type."));
+            }
         };
 
         let look_up_table = union_look_up_table(&union_fields);
 
         let width =
-            column_by_name::<arrow::array::UInt32Array>(&array, "width", &look_up_table).value(0);
+            column_by_name::<arrow::array::UInt32Array>(&array, "width", &look_up_table)?.value(0);
         let height =
-            column_by_name::<arrow::array::UInt32Array>(&array, "height", &look_up_table).value(0);
+            column_by_name::<arrow::array::UInt32Array>(&array, "height", &look_up_table)?.value(0);
         let encoding = Encoding::from_string(
-            &column_by_name::<arrow::array::StringArray>(&array, "encoding", &look_up_table)
+            &column_by_name::<arrow::array::StringArray>(&array, "encoding", &look_up_table)?
                 .value(0),
-        );
+        )?;
 
-        let name = column_by_name::<arrow::array::StringArray>(&array, "name", &look_up_table);
+        let name = column_by_name::<arrow::array::StringArray>(&array, "name", &look_up_table)?;
 
         let name = if name.is_null(0) {
             None
@@ -185,7 +209,7 @@ impl Image<u8> {
         unsafe {
             let array = mem::ManuallyDrop::new(array);
             let pixels =
-                column_by_name::<arrow::array::UInt8Array>(&array, "pixels", &look_up_table);
+                column_by_name::<arrow::array::UInt8Array>(&array, "pixels", &look_up_table)?;
 
             let ptr = pixels.values().as_ptr();
             let len = pixels.len();
@@ -193,14 +217,13 @@ impl Image<u8> {
             let pixels = Vec::from_raw_parts(ptr as *mut u8, len, len);
 
             return match encoding {
-                Encoding::RGB8 => Self::new_rgb8(pixels, width, height, name),
-                Encoding::BGR8 => Self::new_bgr8(pixels, width, height, name),
-                Encoding::Unknown => panic!("Unknown encoding"),
+                Encoding::RGB8 => Ok(Self::new_rgb8(pixels, width, height, name)),
+                Encoding::BGR8 => Ok(Self::new_bgr8(pixels, width, height, name)),
             };
         }
     }
 
-    pub fn to_arrow(self) -> arrow::array::UnionArray {
+    pub fn to_arrow(self) -> Result<arrow::array::UnionArray> {
         let pixels = arrow::array::UInt8Array::from(self.pixels);
 
         let width = arrow::array::UInt32Array::from(vec![self.width; 1]);
@@ -230,6 +253,7 @@ impl Image<u8> {
             Arc::new(name),
         ];
 
-        arrow::array::UnionArray::try_new(union_fields, type_ids, Some(offsets), children).unwrap()
+        arrow::array::UnionArray::try_new(union_fields, type_ids, Some(offsets), children)
+            .wrap_err("Failed to create UnionArray")
     }
 }
