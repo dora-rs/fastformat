@@ -292,31 +292,32 @@ impl Image {
         arrow::array::UInt32Array,
         arrow::array::UInt32Array,
         arrow::array::StringArray,
-        arrow::array::StringArray,
     ) {
         let width = arrow::array::UInt32Array::from(vec![image.width; 1]);
         let height = arrow::array::UInt32Array::from(vec![image.height; 1]);
-        let encoding = arrow::array::StringArray::from(vec!["BGR8".to_string(); 1]);
 
         let name = arrow::array::StringArray::from(vec![image.name.clone(); 1]);
 
-        (width, height, encoding, name)
+        (width, height, name)
     }
 
     pub fn to_arrow(self) -> Result<arrow::array::UnionArray> {
-        let ((width, height, encoding, name), pixels, datatype) = match self {
+        let ((width, height, name), encoding, pixels, datatype) = match self {
             Image::ImageBGR8(image) => (
                 Self::get_image_details(&image),
+                arrow::array::StringArray::from(vec!["BGR8".to_string(); 1]),
                 arrow::array::UInt8Array::from(image.pixels),
                 arrow::datatypes::DataType::UInt8,
             ),
             Image::ImageRGB8(image) => (
                 Self::get_image_details(&image),
+                arrow::array::StringArray::from(vec!["RGB8".to_string(); 1]),
                 arrow::array::UInt8Array::from(image.pixels),
                 arrow::datatypes::DataType::UInt8,
             ),
             Image::ImageGray8(image) => (
                 Self::get_image_details(&image),
+                arrow::array::StringArray::from(vec!["GRAY8".to_string(); 1]),
                 arrow::array::UInt8Array::from(image.pixels),
                 arrow::datatypes::DataType::UInt8,
             ),
