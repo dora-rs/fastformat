@@ -1,8 +1,10 @@
-use crate::arrow::{column_by_name, union_field, union_look_up_table};
+use eyre::{Report, Result};
 
-use std::{mem, sync::Arc};
+mod bgr8;
+mod gray8;
+mod rgb8;
 
-use eyre::{Context, Report, Result};
+mod arrow;
 
 #[derive(Debug)]
 pub struct ImageData<T> {
@@ -29,34 +31,7 @@ impl Image {
         }
     }
 
-    pub fn new_bgr8(pixels: Vec<u8>, width: u32, height: u32, name: Option<&str>) -> Self {
-        Self::ImageBGR8(ImageData {
-            pixels,
-            width,
-            height,
-            name: name.map(|s| s.to_string()),
-        })
-    }
-
-    pub fn new_rgb8(pixels: Vec<u8>, width: u32, height: u32, name: Option<&str>) -> Self {
-        Self::ImageRGB8(ImageData {
-            pixels,
-            width,
-            height,
-            name: name.map(|s| s.to_string()),
-        })
-    }
-
-    pub fn new_gray8(pixels: Vec<u8>, width: u32, height: u32, name: Option<&str>) -> Self {
-        Self::ImageGray8(ImageData {
-            pixels,
-            width,
-            height,
-            name: name.map(|s| s.to_string()),
-        })
-    }
-
-    pub fn to_rgb(self) -> Result<Self> {
+    pub fn to_rgb8(self) -> Result<Self> {
         match self {
             Self::ImageBGR8(image) => {
                 let mut pixels = image.pixels;
@@ -73,11 +48,11 @@ impl Image {
                 }))
             }
             Self::ImageRGB8(_) => Ok(self),
-            Self::ImageGray8(_) => Err(Report::msg("Can't convert grayscale image to RGB")),
+            _ => Err(Report::msg("Can't convert image to RGB8")),
         }
     }
 
-    pub fn to_bgr(self) -> Result<Self> {
+    pub fn to_bgr8(self) -> Result<Self> {
         match self {
             Self::ImageRGB8(image) => {
                 let mut pixels = image.pixels;
@@ -94,257 +69,29 @@ impl Image {
                 }))
             }
             Self::ImageBGR8(_) => Ok(self),
-            Self::ImageGray8(_) => Err(Report::msg("Can't convert grayscale image to BGR")),
+            _ => Err(Report::msg("Can't convert image to BGR8")),
         }
     }
+}
 
-    pub fn from_rgb8_ndarray(array: ndarray::Array<u8, ndarray::Ix3>, name: Option<&str>) -> Self {
-        let width = array.shape()[1] as u32;
-        let height = array.shape()[0] as u32;
+mod tests {
+    #[test]
+    fn test_rgb8_to_bgr8() {
+        use crate::image::Image;
 
-        let pixels = array.into_raw_vec();
+        let flat_image = (1..28).collect::<Vec<u8>>();
 
-        Self::new_rgb8(pixels, width, height, name)
+        let image = Image::new_rgb8(flat_image, 3, 3, Some("camera.test")).unwrap();
+        image.to_bgr8().unwrap();
     }
 
-    pub fn from_bgr8_ndarray(array: ndarray::Array<u8, ndarray::Ix3>, name: Option<&str>) -> Self {
-        let width = array.shape()[1] as u32;
-        let height = array.shape()[0] as u32;
+    #[test]
+    fn test_bgr8_to_rgb8() {
+        use crate::image::Image;
 
-        let pixels = array.into_raw_vec();
+        let flat_image = (1..28).collect::<Vec<u8>>();
 
-        Self::new_bgr8(pixels, width, height, name)
-    }
-
-    pub fn from_gray8_ndarray(array: ndarray::Array<u8, ndarray::Ix2>, name: Option<&str>) -> Self {
-        let width = array.shape()[1] as u32;
-        let height = array.shape()[0] as u32;
-
-        let pixels = array.into_raw_vec();
-
-        Self::new_gray8(pixels, width, height, name)
-    }
-
-    pub fn to_rgb8_ndarray(self) -> Result<ndarray::Array<u8, ndarray::Ix3>> {
-        match self {
-            Self::ImageRGB8(image) => ndarray::Array::from_shape_vec(
-                (image.height as usize, image.width as usize, 3),
-                image.pixels,
-            )
-            .wrap_err("Failed to reshape pixels into ndarray: width, height and RGB8 encoding doesn't match pixels data length."),
-            _ => Err(Report::msg("Image is not in RGB8 format")),
-        }
-    }
-
-    pub fn to_bgr8_ndarray(self) -> Result<ndarray::Array<u8, ndarray::Ix3>> {
-        match self {
-            Self::ImageBGR8(image) => ndarray::Array::from_shape_vec(
-                (image.height as usize, image.width as usize, 3),
-                image.pixels,
-            )
-            .wrap_err("Failed to reshape pixels into ndarray: width, height and BGR8 encoding doesn't match pixels data length."),
-            _ => Err(Report::msg("Image is not in BGR8 format")),
-        }
-    }
-
-    pub fn to_gray8_ndarray(self) -> Result<ndarray::Array<u8, ndarray::Ix2>> {
-        match self {
-            Self::ImageGray8(image) => ndarray::Array::from_shape_vec(
-                (image.height as usize, image.width as usize),
-                image.pixels,
-            )
-            .wrap_err("Failed to reshape pixels into ndarray: width, height and Gray8 encoding doesn't match pixels data length."),
-            _ => Err(Report::msg("Image is not in Gray8 format")),
-        }
-    }
-
-    pub fn to_rgb8_ndarray_view(&self) -> Result<ndarray::ArrayView<u8, ndarray::Ix3>> {
-        match self {
-            Self::ImageRGB8(image) => ndarray::ArrayView::from_shape(
-                (image.height as usize, image.width as usize, 3),
-                &image.pixels,
-            )
-            .wrap_err("Failed to reshape pixels into ndarray: width, height and RGB8 encoding doesn't match pixels data length."),
-            _ => Err(Report::msg("Image is not in RGB8 format")),
-        }
-    }
-
-    pub fn to_bgr8_ndarray_view(&self) -> Result<ndarray::ArrayView<u8, ndarray::Ix3>> {
-        match self {
-            Self::ImageBGR8(image) => ndarray::ArrayView::from_shape(
-                (image.height as usize, image.width as usize, 3),
-                &image.pixels,
-            )
-            .wrap_err("Failed to reshape pixels into ndarray: width, height and BGR8 encoding doesn't match pixels data length."),
-            _ => Err(Report::msg("Image is not in BGR8 format")),
-        }
-    }
-
-    pub fn to_gray8_ndarray_view(&self) -> Result<ndarray::ArrayView<u8, ndarray::Ix2>> {
-        match self {
-            Self::ImageGray8(image) => ndarray::ArrayView::from_shape(
-                (image.height as usize, image.width as usize),
-                &image.pixels,
-            )
-            .wrap_err("Failed to reshape pixels into ndarray: width, height and Gray8 encoding doesn't match pixels data length."),
-            _ => Err(Report::msg("Image is not in Gray8 format")),
-        }
-    }
-
-    pub fn to_rgb8_ndarray_view_mut(&mut self) -> Result<ndarray::ArrayViewMut<u8, ndarray::Ix3>> {
-        match self {
-            Self::ImageRGB8(image) => ndarray::ArrayViewMut::from_shape(
-                (image.height as usize, image.width as usize, 3),
-                &mut image.pixels,
-            )
-            .wrap_err("Failed to reshape pixels into ndarray: width, height and RGB8 encoding doesn't match pixels data length."),
-            _ => Err(Report::msg("Image is not in RGB8 format")),
-        }
-    }
-
-    pub fn to_bgr8_ndarray_view_mut(&mut self) -> Result<ndarray::ArrayViewMut<u8, ndarray::Ix3>> {
-        match self {
-            Self::ImageBGR8(image) => ndarray::ArrayViewMut::from_shape(
-                (image.height as usize, image.width as usize, 3),
-                &mut image.pixels,
-            )
-            .wrap_err("Failed to reshape pixels into ndarray: width, height and BGR8 encoding doesn't match pixels data length."),
-            _ => Err(Report::msg("Image is not in BGR8 format")),
-        }
-    }
-
-    pub fn to_gray8_ndarray_view_mut(&mut self) -> Result<ndarray::ArrayViewMut<u8, ndarray::Ix2>> {
-        match self {
-            Self::ImageGray8(image) => ndarray::ArrayViewMut::from_shape(
-                (image.height as usize, image.width as usize),
-                &mut image.pixels,
-            )
-            .wrap_err("Failed to reshape pixels into ndarray: width, height and Gray8 encoding doesn't match pixels data length."),
-            _ => Err(Report::msg("Image is not in Gray8 format")),
-        }
-    }
-
-    pub fn from_arrow(array: arrow::array::UnionArray) -> Result<Self> {
-        use arrow::array::Array;
-
-        let union_fields = match array.data_type() {
-            arrow::datatypes::DataType::Union(fields, ..) => fields,
-            _ => {
-                return Err(Report::msg("UnionArray has invalid data type."));
-            }
-        };
-
-        let look_up_table = union_look_up_table(&union_fields);
-
-        let width =
-            column_by_name::<arrow::array::UInt32Array>(&array, "width", &look_up_table)?.value(0);
-        let height =
-            column_by_name::<arrow::array::UInt32Array>(&array, "height", &look_up_table)?.value(0);
-        let encoding =
-            column_by_name::<arrow::array::StringArray>(&array, "encoding", &look_up_table)?
-                .value(0)
-                .to_string();
-
-        let name = column_by_name::<arrow::array::StringArray>(&array, "name", &look_up_table)?;
-
-        let name = if name.is_null(0) {
-            None
-        } else {
-            Some(name.value(0).to_string())
-        };
-
-        let name = name.as_ref().map(|s| s.as_str());
-
-        unsafe {
-            let array = mem::ManuallyDrop::new(array);
-            let pixels = match encoding.as_str() {
-                "RGB8" => {
-                    column_by_name::<arrow::array::UInt8Array>(&array, "pixels", &look_up_table)?
-                }
-                "BGR8" => {
-                    column_by_name::<arrow::array::UInt8Array>(&array, "pixels", &look_up_table)?
-                }
-                "GRAY8" => {
-                    column_by_name::<arrow::array::UInt8Array>(&array, "pixels", &look_up_table)?
-                }
-                _ => {
-                    return Err(Report::msg(format!("Invalid encoding: {}", encoding)));
-                }
-            };
-
-            let ptr = pixels.values().as_ptr();
-            let len = pixels.len();
-
-            let pixels = Vec::from_raw_parts(ptr as *mut u8, len, len);
-
-            return match encoding.as_str() {
-                "RGB8" => Ok(Self::new_rgb8(pixels, width, height, name)),
-                "BGR8" => Ok(Self::new_bgr8(pixels, width, height, name)),
-                "GRAY8" => Ok(Self::new_gray8(pixels, width, height, name)),
-                _ => Err(Report::msg(format!("Invalid encoding: {}", encoding))),
-            };
-        }
-    }
-
-    fn get_image_details<T>(
-        image: &ImageData<T>,
-    ) -> (
-        arrow::array::UInt32Array,
-        arrow::array::UInt32Array,
-        arrow::array::StringArray,
-    ) {
-        let width = arrow::array::UInt32Array::from(vec![image.width; 1]);
-        let height = arrow::array::UInt32Array::from(vec![image.height; 1]);
-
-        let name = arrow::array::StringArray::from(vec![image.name.clone(); 1]);
-
-        (width, height, name)
-    }
-
-    pub fn to_arrow(self) -> Result<arrow::array::UnionArray> {
-        let ((width, height, name), encoding, pixels, datatype) = match self {
-            Image::ImageBGR8(image) => (
-                Self::get_image_details(&image),
-                arrow::array::StringArray::from(vec!["BGR8".to_string(); 1]),
-                arrow::array::UInt8Array::from(image.pixels),
-                arrow::datatypes::DataType::UInt8,
-            ),
-            Image::ImageRGB8(image) => (
-                Self::get_image_details(&image),
-                arrow::array::StringArray::from(vec!["RGB8".to_string(); 1]),
-                arrow::array::UInt8Array::from(image.pixels),
-                arrow::datatypes::DataType::UInt8,
-            ),
-            Image::ImageGray8(image) => (
-                Self::get_image_details(&image),
-                arrow::array::StringArray::from(vec!["GRAY8".to_string(); 1]),
-                arrow::array::UInt8Array::from(image.pixels),
-                arrow::datatypes::DataType::UInt8,
-            ),
-        };
-
-        let type_ids = [].into_iter().collect::<arrow::buffer::ScalarBuffer<i8>>();
-        let offsets = [].into_iter().collect::<arrow::buffer::ScalarBuffer<i32>>();
-
-        let union_fields = [
-            union_field(0, "pixels", datatype, false),
-            union_field(1, "width", arrow::datatypes::DataType::UInt32, false),
-            union_field(2, "height", arrow::datatypes::DataType::UInt32, false),
-            union_field(3, "encoding", arrow::datatypes::DataType::Utf8, false),
-            union_field(4, "name", arrow::datatypes::DataType::Utf8, true),
-        ]
-        .into_iter()
-        .collect::<arrow::datatypes::UnionFields>();
-
-        let children: Vec<Arc<dyn arrow::array::Array>> = vec![
-            Arc::new(pixels),
-            Arc::new(width),
-            Arc::new(height),
-            Arc::new(encoding),
-            Arc::new(name),
-        ];
-
-        arrow::array::UnionArray::try_new(union_fields, type_ids, Some(offsets), children)
-            .wrap_err("Failed to create UnionArray")
+        let image = Image::new_bgr8(flat_image, 3, 3, Some("camera.test")).unwrap();
+        image.to_rgb8().unwrap();
     }
 }

@@ -11,9 +11,9 @@ fn camera_read() -> ndarray::Array<u8, ndarray::Ix3> {
         flat_image.as_ptr()
     );
 
-    let image = Image::new_bgr8(flat_image, 3, 3, None);
+    let image = Image::new_bgr8(flat_image, 3, 3, None).unwrap();
 
-    return image.to_bgr8_ndarray().unwrap();
+    return image.bgr8_to_ndarray().unwrap();
 }
 
 fn image_show(_frame: ndarray::ArrayView<u8, ndarray::Ix3>) {
@@ -37,10 +37,10 @@ fn main() {
     // Read OpenCV Camera, default is nd_array BGR8
     let frame = camera_read();
 
-    let image = Image::from_bgr8_ndarray(frame, Some("camera.left"));
+    let image = Image::bgr8_from_ndarray(frame, Some("camera.left")).unwrap();
 
     // Convert to RGB8, apply some filter (Black and White).
-    let mut frame = image.to_rgb().unwrap().to_rgb8_ndarray().unwrap();
+    let mut frame = image.to_rgb8().unwrap().rgb8_to_ndarray().unwrap();
 
     for i in 0..frame.shape()[0] {
         for j in 0..frame.shape()[1] {
@@ -59,10 +59,10 @@ fn main() {
         }
     }
 
-    let image = Image::from_rgb8_ndarray(frame, Some("camera.left.baw"));
+    let image = Image::rgb8_from_ndarray(frame, Some("camera.left.baw")).unwrap();
 
     // Plot the image, you may only need a nd array view
-    image_show(image.to_rgb8_ndarray_view().unwrap());
+    image_show(image.rgb8_to_ndarray_view().unwrap());
 
     send_output(image.to_arrow().unwrap());
 }
