@@ -1,4 +1,4 @@
-use crate::arrow::{column_by_name, union_field, union_look_up_table};
+use crate::arrow::{column_by_name, union_field, union_lookup_table};
 
 use super::{Image, ImageData};
 use eyre::{Context, Report, Result};
@@ -6,6 +6,38 @@ use eyre::{Context, Report, Result};
 use std::{mem, sync::Arc};
 
 impl Image {
+    /// Constructs an `Image` from an Arrow `UnionArray`.
+    ///
+    /// This function takes an Arrow `UnionArray` and extracts the necessary fields to construct
+    /// an `Image` object. It validates the data type of the `UnionArray`, builds a lookup table for
+    /// the fields, retrieves the image properties (width, height, encoding, name), and decodes the
+    /// pixel data based on the encoding.
+    ///
+    /// # Arguments
+    ///
+    /// * `array` - A reference to an `arrow::array::UnionArray` that contains the image data.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the constructed `Image` if successful, or an error otherwise.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the `UnionArray` has an invalid data type, if required fields are missing,
+    /// or if the pixel data cannot be downcasted to the expected type based on the encoding.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use arrow::array::UnionArray;
+    /// use fastformat::image::Image;
+    ///
+    /// let pixels = vec![0; 27]; // 3x3 image with 3 bytes per pixel
+    /// let image = Image::new_bgr8(pixels, 3, 3, None).unwrap();
+    /// let array = image.to_arrow().unwrap();
+    ///
+    /// let image = Image::from_arrow(array).unwrap();
+    /// ```
     pub fn from_arrow(array: arrow::array::UnionArray) -> Result<Self> {
         use arrow::array::Array;
 
@@ -16,18 +48,18 @@ impl Image {
             }
         };
 
-        let look_up_table = union_look_up_table(&union_fields);
+        let lookup_table = union_lookup_table(&union_fields);
 
         let width =
-            column_by_name::<arrow::array::UInt32Array>(&array, "width", &look_up_table)?.value(0);
+            column_by_name::<arrow::array::UInt32Array>(&array, "width", &lookup_table)?.value(0);
         let height =
-            column_by_name::<arrow::array::UInt32Array>(&array, "height", &look_up_table)?.value(0);
+            column_by_name::<arrow::array::UInt32Array>(&array, "height", &lookup_table)?.value(0);
         let encoding =
-            column_by_name::<arrow::array::StringArray>(&array, "encoding", &look_up_table)?
+            column_by_name::<arrow::array::StringArray>(&array, "encoding", &lookup_table)?
                 .value(0)
                 .to_string();
 
-        let name = column_by_name::<arrow::array::StringArray>(&array, "name", &look_up_table)?;
+        let name = column_by_name::<arrow::array::StringArray>(&array, "name", &lookup_table)?;
 
         let name = if name.is_null(0) {
             None
@@ -41,13 +73,13 @@ impl Image {
             let array = mem::ManuallyDrop::new(array);
             let pixels = match encoding.as_str() {
                 "RGB8" => {
-                    column_by_name::<arrow::array::UInt8Array>(&array, "pixels", &look_up_table)?
+                    column_by_name::<arrow::array::UInt8Array>(&array, "pixels", &lookup_table)?
                 }
                 "BGR8" => {
-                    column_by_name::<arrow::array::UInt8Array>(&array, "pixels", &look_up_table)?
+                    column_by_name::<arrow::array::UInt8Array>(&array, "pixels", &lookup_table)?
                 }
                 "GRAY8" => {
-                    column_by_name::<arrow::array::UInt8Array>(&array, "pixels", &look_up_table)?
+                    column_by_name::<arrow::array::UInt8Array>(&array, "pixels", &lookup_table)?
                 }
                 _ => {
                     return Err(Report::msg(format!("Invalid encoding: {}", encoding)));
@@ -68,6 +100,19 @@ impl Image {
         }
     }
 
+    /// Extracts image details (width, height, name) from an `ImageData` object.
+    ///
+    /// This function takes a reference to an `ImageData` object and creates Arrow arrays for the width,
+    /// height, and name of the image.
+    ///
+    /// # Arguments
+    ///
+    /// * `image` - A reference to an `ImageData<T>` object that contains the image properties.
+    ///
+    /// # Returns
+    ///
+    /// A tuple containing an `arrow::array::UInt32Array` for the width, an `arrow::array::UInt32Array` for the height,
+    /// and an `arrow::array::StringArray` for the name of the image.
     fn get_image_details<T>(
         image: &ImageData<T>,
     ) -> (
@@ -83,6 +128,36 @@ impl Image {
         (width, height, name)
     }
 
+    /// Converts an `Image` into an Arrow `UnionArray`.
+    ///
+    /// This function takes an `Image` object and converts it into an Arrow `UnionArray`
+    /// that contains the image properties and pixel data. The conversion handles different
+    /// image encodings (BGR8, RGB8, GRAY8) and ensures that the resulting `UnionArray`
+    /// contains all necessary fields.
+    ///
+    /// # Arguments
+    ///
+    /// * `self` - The `Image` object to be converted.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the constructed `arrow::array::UnionArray` if successful, or an error otherwise.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the `UnionArray` cannot be created due to issues with the provided data.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use fastformat::image::Image;
+    /// use fastformat::image::ImageData;
+    ///
+    /// let pixels = vec![0; 640 * 480 * 3];
+    /// let image = Image::new_bgr8(pixels, 640, 480, None).unwrap();
+    ///
+    /// let arrow_array = image.to_arrow().unwrap();
+    /// ```
     pub fn to_arrow(self) -> Result<arrow::array::UnionArray> {
         let ((width, height, name), encoding, pixels, datatype) = match self {
             Image::ImageBGR8(image) => (
@@ -136,7 +211,7 @@ mod tests {
     fn test_arrow_conversion() {
         use crate::image::Image;
 
-        let flat_image = (1..28).collect::<Vec<u8>>();
+        let flat_image = vec![0; 27];
         let original_buffer_address = flat_image.as_ptr();
 
         let bgr8_image = Image::new_bgr8(flat_image, 3, 3, None).unwrap();

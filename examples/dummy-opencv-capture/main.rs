@@ -5,7 +5,7 @@ use fastformat::image::Image;
 fn camera_read() -> ndarray::Array<u8, ndarray::Ix3> {
     // Dummy camera read
 
-    let flat_image = (1..28).collect::<Vec<u8>>();
+    let flat_image = vec![0; 27];
     println!(
         "Generate a camera image at address: {:?}",
         flat_image.as_ptr()
@@ -34,7 +34,7 @@ fn send_output(arrow_array: arrow::array::UnionArray) {
 }
 
 fn main() {
-    // Read OpenCV Camera, default is nd_array BGR8
+    // Read OpenCV Camera, default is ndarray BGR8
     let frame = camera_read();
 
     let image = Image::bgr8_from_ndarray(frame, Some("camera.left")).unwrap();
@@ -61,7 +61,7 @@ fn main() {
 
     let image = Image::rgb8_from_ndarray(frame, Some("camera.left.baw")).unwrap();
 
-    // Plot the image, you may only need a nd array view
+    // Plot the image, you may only need a ndarray_view
     image_show(image.rgb8_to_ndarray_view().unwrap());
 
     send_output(image.to_arrow().unwrap());

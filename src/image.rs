@@ -79,7 +79,7 @@ mod tests {
     fn test_rgb8_to_bgr8() {
         use crate::image::Image;
 
-        let flat_image = (1..28).collect::<Vec<u8>>();
+        let flat_image = vec![0; 27];
 
         let image = Image::new_rgb8(flat_image, 3, 3, Some("camera.test")).unwrap();
         image.to_bgr8().unwrap();
@@ -89,7 +89,7 @@ mod tests {
     fn test_bgr8_to_rgb8() {
         use crate::image::Image;
 
-        let flat_image = (1..28).collect::<Vec<u8>>();
+        let flat_image = vec![0; 27];
 
         let image = Image::new_bgr8(flat_image, 3, 3, Some("camera.test")).unwrap();
         image.to_rgb8().unwrap();
