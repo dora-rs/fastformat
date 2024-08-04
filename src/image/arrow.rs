@@ -48,7 +48,7 @@ impl Image {
             }
         };
 
-        let lookup_table = union_lookup_table(&union_fields);
+        let lookup_table = union_lookup_table(union_fields);
 
         let width =
             column_by_name::<arrow::array::UInt32Array>(&array, "width", &lookup_table)?.value(0);
@@ -67,7 +67,7 @@ impl Image {
             Some(name.value(0).to_string())
         };
 
-        let name = name.as_ref().map(|s| s.as_str());
+        let name = name.as_deref();
 
         unsafe {
             let array = mem::ManuallyDrop::new(array);

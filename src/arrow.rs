@@ -48,7 +48,7 @@ pub fn union_lookup_table(fields: &arrow::datatypes::UnionFields) -> HashMap<Str
         result.insert(b.name().to_string(), a);
     }
 
-    return result;
+    result
 }
 
 /// Retrieves a column from a `UnionArray` by its field name and downcasts it to the specified type.
