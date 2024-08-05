@@ -82,8 +82,8 @@ pub fn union_lookup_table(fields: &arrow::datatypes::UnionFields) -> HashMap<Str
 /// use fastformat::arrow::union_lookup_table;
 /// use fastformat::arrow::column_by_name;
 ///
-/// let pixels = vec![0; 27]; // 3x3 image with 3 bytes per pixel
-/// let image = Image::new_bgr8(pixels, 3, 3, None).unwrap();
+/// let data = vec![0; 27]; // 3x3 image with 3 bytes per pixel
+/// let image = Image::new_bgr8(data, 3, 3, None).unwrap();
 /// let array = image.to_arrow().unwrap();
 ///
 /// let union_fields = match array.data_type() {

@@ -32,8 +32,8 @@ impl Image {
     /// use arrow::array::UnionArray;
     /// use fastformat::image::Image;
     ///
-    /// let pixels = vec![0; 27]; // 3x3 image with 3 bytes per pixel
-    /// let image = Image::new_bgr8(pixels, 3, 3, None).unwrap();
+    /// let data = vec![0; 27]; // 3x3 image with 3 bytes per pixel
+    /// let image = Image::new_bgr8(data, 3, 3, None).unwrap();
     /// let array = image.to_arrow().unwrap();
     ///
     /// let image = Image::from_arrow(array).unwrap();
@@ -71,30 +71,30 @@ impl Image {
 
         unsafe {
             let array = mem::ManuallyDrop::new(array);
-            let pixels = match encoding.as_str() {
+            let data = match encoding.as_str() {
                 "RGB8" => {
-                    column_by_name::<arrow::array::UInt8Array>(&array, "pixels", &lookup_table)?
+                    column_by_name::<arrow::array::UInt8Array>(&array, "data", &lookup_table)?
                 }
                 "BGR8" => {
-                    column_by_name::<arrow::array::UInt8Array>(&array, "pixels", &lookup_table)?
+                    column_by_name::<arrow::array::UInt8Array>(&array, "data", &lookup_table)?
                 }
                 "GRAY8" => {
-                    column_by_name::<arrow::array::UInt8Array>(&array, "pixels", &lookup_table)?
+                    column_by_name::<arrow::array::UInt8Array>(&array, "data", &lookup_table)?
                 }
                 _ => {
                     return Err(Report::msg(format!("Invalid encoding: {}", encoding)));
                 }
             };
 
-            let ptr = pixels.values().as_ptr();
-            let len = pixels.len();
+            let ptr = data.values().as_ptr();
+            let len = data.len();
 
-            let pixels = Vec::from_raw_parts(ptr as *mut u8, len, len);
+            let data = Vec::from_raw_parts(ptr as *mut u8, len, len);
 
             return match encoding.as_str() {
-                "RGB8" => Self::new_rgb8(pixels, width, height, name),
-                "BGR8" => Self::new_bgr8(pixels, width, height, name),
-                "GRAY8" => Self::new_gray8(pixels, width, height, name),
+                "RGB8" => Self::new_rgb8(data, width, height, name),
+                "BGR8" => Self::new_bgr8(data, width, height, name),
+                "GRAY8" => Self::new_gray8(data, width, height, name),
                 _ => Err(Report::msg(format!("Invalid encoding: {}", encoding))),
             };
         }
@@ -153,29 +153,29 @@ impl Image {
     /// use fastformat::image::Image;
     /// use fastformat::image::ImageData;
     ///
-    /// let pixels = vec![0; 640 * 480 * 3];
-    /// let image = Image::new_bgr8(pixels, 640, 480, None).unwrap();
+    /// let data = vec![0; 640 * 480 * 3];
+    /// let image = Image::new_bgr8(data, 640, 480, None).unwrap();
     ///
     /// let arrow_array = image.to_arrow().unwrap();
     /// ```
     pub fn to_arrow(self) -> Result<arrow::array::UnionArray> {
-        let ((width, height, name), encoding, pixels, datatype) = match self {
+        let ((width, height, name), encoding, data, datatype) = match self {
             Image::ImageBGR8(image) => (
                 Self::get_image_details(&image),
                 arrow::array::StringArray::from(vec!["BGR8".to_string(); 1]),
-                arrow::array::UInt8Array::from(image.pixels),
+                arrow::array::UInt8Array::from(image.data),
                 arrow::datatypes::DataType::UInt8,
             ),
             Image::ImageRGB8(image) => (
                 Self::get_image_details(&image),
                 arrow::array::StringArray::from(vec!["RGB8".to_string(); 1]),
-                arrow::array::UInt8Array::from(image.pixels),
+                arrow::array::UInt8Array::from(image.data),
                 arrow::datatypes::DataType::UInt8,
             ),
             Image::ImageGray8(image) => (
                 Self::get_image_details(&image),
                 arrow::array::StringArray::from(vec!["GRAY8".to_string(); 1]),
-                arrow::array::UInt8Array::from(image.pixels),
+                arrow::array::UInt8Array::from(image.data),
                 arrow::datatypes::DataType::UInt8,
             ),
         };
@@ -184,7 +184,7 @@ impl Image {
         let offsets = [].into_iter().collect::<arrow::buffer::ScalarBuffer<i32>>();
 
         let union_fields = [
-            union_field(0, "pixels", datatype, false),
+            union_field(0, "data", datatype, false),
             union_field(1, "width", arrow::datatypes::DataType::UInt32, false),
             union_field(2, "height", arrow::datatypes::DataType::UInt32, false),
             union_field(3, "encoding", arrow::datatypes::DataType::Utf8, false),
@@ -194,7 +194,7 @@ impl Image {
         .collect::<arrow::datatypes::UnionFields>();
 
         let children: Vec<Arc<dyn arrow::array::Array>> = vec![
-            Arc::new(pixels),
+            Arc::new(data),
             Arc::new(width),
             Arc::new(height),
             Arc::new(encoding),

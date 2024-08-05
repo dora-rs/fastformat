@@ -20,8 +20,8 @@ Numpy, or Arrow, without unnecessary copies.
 
 ## DataTypes
 
-- **Image** as a **UnionArray**,
-    - Field "pixels': UintXArray (e.g [0, 255, 0, 255, 0, 255, ...])
+- **Image**: (Arrow representation is a **UnionArray**),
+    - Field "data': UintXArray (e.g [0, 255, 0, 255, 0, 255, ...])
     - Field "width": Uint32Array (e.g [1280])
     - Field "height": Uint32Array (e.g [720])
     - Field "encoding": StringArray (e.g ["RGB8"])

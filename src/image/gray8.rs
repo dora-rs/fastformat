@@ -11,7 +11,7 @@ impl Image {
     ///
     /// # Arguments
     ///
-    /// * `pixels` - A `Vec<u8>` containing the pixel data in Gray8 format.
+    /// * `data` - A `Vec<u8>` containing the pixel data in Gray8 format.
     /// * `width` - The width of the image.
     /// * `height` - The height of the image.
     /// * `name` - An optional string slice representing the name of the image.
@@ -30,16 +30,16 @@ impl Image {
     /// ```
     /// use fastformat::image::Image;
     ///
-    /// let pixels = vec![0; 9]; // 3x3 image with 1 byte per pixel
-    /// let image = Image::new_gray8(pixels, 3, 3, Some("example")).unwrap();
+    /// let data = vec![0; 9]; // 3x3 image with 1 byte per pixel
+    /// let image = Image::new_gray8(data, 3, 3, Some("example")).unwrap();
     /// ```
-    pub fn new_gray8(pixels: Vec<u8>, width: u32, height: u32, name: Option<&str>) -> Result<Self> {
-        if pixels.len() != (width * height) as usize {
-            return Err(Report::msg("Invalid pixels data length."));
+    pub fn new_gray8(data: Vec<u8>, width: u32, height: u32, name: Option<&str>) -> Result<Self> {
+        if data.len() != (width * height) as usize {
+            return Err(Report::msg("Invalid data data length."));
         }
 
         Ok(Self::ImageGray8(ImageData {
-            pixels,
+            data,
             width,
             height,
             name: name.map(|s| s.to_string()),
@@ -80,9 +80,9 @@ impl Image {
         let width = array.shape()[1] as u32;
         let height = array.shape()[0] as u32;
 
-        let pixels = array.into_raw_vec();
+        let data = array.into_raw_vec();
 
-        Self::new_gray8(pixels, width, height, name)
+        Self::new_gray8(data, width, height, name)
     }
 
     /// Converts a Gray8 `Image` into an ndarray.
@@ -108,8 +108,8 @@ impl Image {
     /// ```
     /// use fastformat::image::Image;
     ///
-    /// let pixels = vec![0; 9]; // 3x3 image with 1 byte per pixel
-    /// let image = Image::new_gray8(pixels, 3, 3, Some("example")).unwrap();
+    /// let data = vec![0; 9]; // 3x3 image with 1 byte per pixel
+    /// let image = Image::new_gray8(data, 3, 3, Some("example")).unwrap();
     ///
     /// let ndarray = image.gray8_to_ndarray().unwrap();
     /// ```
@@ -117,9 +117,9 @@ impl Image {
         match self {
                 Self::ImageGray8(image) => ndarray::Array::from_shape_vec(
                     (image.height as usize, image.width as usize),
-                    image.pixels,
+                    image.data,
                 )
-                .wrap_err("Failed to reshape pixels into ndarray: width, height and Gray8 encoding doesn't match pixels data length."),
+                .wrap_err("Failed to reshape data into ndarray: width, height and Gray8 encoding doesn't match data data length."),
                 _ => Err(Report::msg("Image is not in Gray8 format")),
             }
     }
@@ -147,8 +147,8 @@ impl Image {
     /// ```
     /// use fastformat::image::Image;
     ///
-    /// let pixels = vec![0; 9]; // 3x3 image with 1 byte per pixel
-    /// let image = Image::new_gray8(pixels, 3, 3, Some("example")).unwrap();
+    /// let data = vec![0; 9]; // 3x3 image with 1 byte per pixel
+    /// let image = Image::new_gray8(data, 3, 3, Some("example")).unwrap();
     ///
     /// let ndarray_view = image.gray8_to_ndarray_view().unwrap();
     /// ```
@@ -156,9 +156,9 @@ impl Image {
         match self {
                 Self::ImageGray8(image) => ndarray::ArrayView::from_shape(
                     (image.height as usize, image.width as usize),
-                    &image.pixels,
+                    &image.data,
                 )
-                .wrap_err("Failed to reshape pixels into ndarray: width, height and Gray8 encoding doesn't match pixels data length."),
+                .wrap_err("Failed to reshape data into ndarray: width, height and Gray8 encoding doesn't match data data length."),
                 _ => Err(Report::msg("Image is not in Gray8 format")),
             }
     }
@@ -186,8 +186,8 @@ impl Image {
     /// ```
     /// use fastformat::image::Image;
     ///
-    /// let pixels = vec![0; 9]; // 3x3 image with 1 byte per pixel
-    /// let mut image = Image::new_gray8(pixels, 3, 3, Some("example")).unwrap();
+    /// let data = vec![0; 9]; // 3x3 image with 1 byte per pixel
+    /// let mut image = Image::new_gray8(data, 3, 3, Some("example")).unwrap();
     ///
     /// let ndarray_view_mut = image.gray8_to_ndarray_view_mut().unwrap();
     /// ```
@@ -195,9 +195,9 @@ impl Image {
         match self {
                 Self::ImageGray8(image) => ndarray::ArrayViewMut::from_shape(
                     (image.height as usize, image.width as usize),
-                    &mut image.pixels,
+                    &mut image.data,
                 )
-                .wrap_err("Failed to reshape pixels into ndarray: width, height and Gray8 encoding doesn't match pixels data length."),
+                .wrap_err("Failed to reshape data into ndarray: width, height and Gray8 encoding doesn't match data data length."),
                 _ => Err(Report::msg("Image is not in Gray8 format")),
             }
     }

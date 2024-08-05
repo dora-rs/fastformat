@@ -8,7 +8,7 @@ mod arrow;
 
 #[derive(Debug)]
 pub struct ImageData<T> {
-    pixels: Vec<T>,
+    data: Vec<T>,
 
     width: u32,
     height: u32,
@@ -25,23 +25,23 @@ pub enum Image {
 impl Image {
     pub fn as_ptr(&self) -> *const u8 {
         match self {
-            Self::ImageRGB8(image) => image.pixels.as_ptr(),
-            Self::ImageBGR8(image) => image.pixels.as_ptr(),
-            Self::ImageGray8(image) => image.pixels.as_ptr(),
+            Self::ImageRGB8(image) => image.data.as_ptr(),
+            Self::ImageBGR8(image) => image.data.as_ptr(),
+            Self::ImageGray8(image) => image.data.as_ptr(),
         }
     }
 
     pub fn to_rgb8(self) -> Result<Self> {
         match self {
             Self::ImageBGR8(image) => {
-                let mut pixels = image.pixels;
+                let mut data = image.data;
 
-                for i in (0..pixels.len()).step_by(3) {
-                    pixels.swap(i, i + 2);
+                for i in (0..data.len()).step_by(3) {
+                    data.swap(i, i + 2);
                 }
 
                 Ok(Self::ImageRGB8(ImageData {
-                    pixels,
+                    data,
                     width: image.width,
                     height: image.height,
                     name: image.name.clone(),
@@ -55,14 +55,14 @@ impl Image {
     pub fn to_bgr8(self) -> Result<Self> {
         match self {
             Self::ImageRGB8(image) => {
-                let mut pixels = image.pixels;
+                let mut data = image.data;
 
-                for i in (0..pixels.len()).step_by(3) {
-                    pixels.swap(i, i + 2);
+                for i in (0..data.len()).step_by(3) {
+                    data.swap(i, i + 2);
                 }
 
                 Ok(Self::ImageBGR8(ImageData {
-                    pixels,
+                    data,
                     width: image.width,
                     height: image.height,
                     name: image.name.clone(),
