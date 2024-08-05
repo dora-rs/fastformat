@@ -1,5 +1,4 @@
-use super::{Image, ImageData};
-
+use super::{container::DataContainer, encoding::Encoding, Image};
 use eyre::{Context, Report, Result};
 
 impl Image {
@@ -38,12 +37,13 @@ impl Image {
             return Err(Report::msg("Invalid data data length."));
         }
 
-        Ok(Self::ImageGray8(ImageData {
-            data,
+        Ok(Image {
+            data: DataContainer::from_u8(data),
             width,
             height,
+            encoding: Encoding::GRAY8,
             name: name.map(|s| s.to_string()),
-        }))
+        })
     }
 
     /// Creates a new `Image` in Gray8 format from an ndarray.
@@ -114,10 +114,10 @@ impl Image {
     /// let ndarray = image.gray8_to_ndarray().unwrap();
     /// ```
     pub fn gray8_to_ndarray(self) -> Result<ndarray::Array<u8, ndarray::Ix2>> {
-        match self {
-                Self::ImageGray8(image) => ndarray::Array::from_shape_vec(
-                    (image.height as usize, image.width as usize),
-                    image.data,
+        match self.encoding {
+                Encoding::GRAY8 => ndarray::Array::from_shape_vec(
+                    (self.height as usize, self.width as usize),
+                    self.data.into_u8()?,
                 )
                 .wrap_err("Failed to reshape data into ndarray: width, height and Gray8 encoding doesn't match data data length."),
                 _ => Err(Report::msg("Image is not in Gray8 format")),
@@ -153,10 +153,10 @@ impl Image {
     /// let ndarray_view = image.gray8_to_ndarray_view().unwrap();
     /// ```
     pub fn gray8_to_ndarray_view(&self) -> Result<ndarray::ArrayView<u8, ndarray::Ix2>> {
-        match self {
-                Self::ImageGray8(image) => ndarray::ArrayView::from_shape(
-                    (image.height as usize, image.width as usize),
-                    &image.data,
+        match self.encoding {
+                Encoding::GRAY8 => ndarray::ArrayView::from_shape(
+                    (self.height as usize, self.width as usize),
+                    self.data.as_u8()?,
                 )
                 .wrap_err("Failed to reshape data into ndarray: width, height and Gray8 encoding doesn't match data data length."),
                 _ => Err(Report::msg("Image is not in Gray8 format")),
@@ -192,10 +192,10 @@ impl Image {
     /// let ndarray_view_mut = image.gray8_to_ndarray_view_mut().unwrap();
     /// ```
     pub fn gray8_to_ndarray_view_mut(&mut self) -> Result<ndarray::ArrayViewMut<u8, ndarray::Ix2>> {
-        match self {
-                Self::ImageGray8(image) => ndarray::ArrayViewMut::from_shape(
-                    (image.height as usize, image.width as usize),
-                    &mut image.data,
+        match self.encoding {
+                Encoding::GRAY8 => ndarray::ArrayViewMut::from_shape(
+                    (self.height as usize, self.width as usize),
+                    self.data.as_mut_u8()?,
                 )
                 .wrap_err("Failed to reshape data into ndarray: width, height and Gray8 encoding doesn't match data data length."),
                 _ => Err(Report::msg("Image is not in Gray8 format")),

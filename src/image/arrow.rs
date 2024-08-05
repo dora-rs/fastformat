@@ -1,11 +1,22 @@
 use crate::arrow::{column_by_name, union_field, union_lookup_table};
 
-use super::{Image, ImageData};
+use super::{container::DataContainer, encoding::Encoding, Image};
 use eyre::{Context, Report, Result};
 
-use std::{mem, sync::Arc};
+use std::{collections::HashMap, mem, sync::Arc};
 
 impl Image {
+    unsafe fn arrow_data_to_vec<T: arrow::datatypes::ArrowPrimitiveType, G>(
+        array: &arrow::array::UnionArray,
+        lookup_table: &HashMap<String, i8>,
+    ) -> Result<Vec<G>> {
+        let arrow = column_by_name::<arrow::array::PrimitiveArray<T>>(array, "data", lookup_table)?;
+        let ptr = arrow.values().as_ptr();
+        let len = arrow.len();
+
+        Ok(Vec::from_raw_parts(ptr as *mut G, len, len))
+    }
+
     /// Constructs an `Image` from an Arrow `UnionArray`.
     ///
     /// This function takes an Arrow `UnionArray` and extracts the necessary fields to construct
@@ -54,10 +65,11 @@ impl Image {
             column_by_name::<arrow::array::UInt32Array>(&array, "width", &lookup_table)?.value(0);
         let height =
             column_by_name::<arrow::array::UInt32Array>(&array, "height", &lookup_table)?.value(0);
-        let encoding =
+        let encoding = Encoding::from_string(
             column_by_name::<arrow::array::StringArray>(&array, "encoding", &lookup_table)?
                 .value(0)
-                .to_string();
+                .to_string(),
+        )?;
 
         let name = column_by_name::<arrow::array::StringArray>(&array, "name", &lookup_table)?;
 
@@ -67,65 +79,54 @@ impl Image {
             Some(name.value(0).to_string())
         };
 
-        let name = name.as_deref();
-
         unsafe {
             let array = mem::ManuallyDrop::new(array);
-            let data = match encoding.as_str() {
-                "RGB8" => {
-                    column_by_name::<arrow::array::UInt8Array>(&array, "data", &lookup_table)?
-                }
-                "BGR8" => {
-                    column_by_name::<arrow::array::UInt8Array>(&array, "data", &lookup_table)?
-                }
-                "GRAY8" => {
-                    column_by_name::<arrow::array::UInt8Array>(&array, "data", &lookup_table)?
-                }
-                _ => {
-                    return Err(Report::msg(format!("Invalid encoding: {}", encoding)));
-                }
+
+            let data = match encoding {
+                Encoding::RGB8 => DataContainer::from_u8(Self::arrow_data_to_vec::<
+                    arrow::datatypes::UInt8Type,
+                    u8,
+                >(&array, &lookup_table)?),
+                Encoding::BGR8 => DataContainer::from_u8(Self::arrow_data_to_vec::<
+                    arrow::datatypes::UInt8Type,
+                    u8,
+                >(&array, &lookup_table)?),
+                Encoding::GRAY8 => DataContainer::from_u8(Self::arrow_data_to_vec::<
+                    arrow::datatypes::UInt8Type,
+                    u8,
+                >(&array, &lookup_table)?),
             };
 
-            let ptr = data.values().as_ptr();
-            let len = data.len();
-
-            let data = Vec::from_raw_parts(ptr as *mut u8, len, len);
-
-            return match encoding.as_str() {
-                "RGB8" => Self::new_rgb8(data, width, height, name),
-                "BGR8" => Self::new_bgr8(data, width, height, name),
-                "GRAY8" => Self::new_gray8(data, width, height, name),
-                _ => Err(Report::msg(format!("Invalid encoding: {}", encoding))),
-            };
+            Ok(Image {
+                data,
+                width,
+                height,
+                encoding,
+                name,
+            })
         }
     }
 
-    /// Extracts image details (width, height, name) from an `ImageData` object.
-    ///
-    /// This function takes a reference to an `ImageData` object and creates Arrow arrays for the width,
-    /// height, and name of the image.
-    ///
-    /// # Arguments
-    ///
-    /// * `image` - A reference to an `ImageData<T>` object that contains the image properties.
-    ///
-    /// # Returns
-    ///
-    /// A tuple containing an `arrow::array::UInt32Array` for the width, an `arrow::array::UInt32Array` for the height,
-    /// and an `arrow::array::StringArray` for the name of the image.
-    fn get_image_details<T>(
-        image: &ImageData<T>,
-    ) -> (
-        arrow::array::UInt32Array,
-        arrow::array::UInt32Array,
-        arrow::array::StringArray,
-    ) {
-        let width = arrow::array::UInt32Array::from(vec![image.width; 1]);
-        let height = arrow::array::UInt32Array::from(vec![image.height; 1]);
+    fn convert_image_details_to_arrow(image: Image) -> Result<Vec<Arc<dyn arrow::array::Array>>> {
+        let width = Arc::new(arrow::array::UInt32Array::from(vec![image.width; 1]));
+        let height = Arc::new(arrow::array::UInt32Array::from(vec![image.height; 1]));
 
-        let name = arrow::array::StringArray::from(vec![image.name.clone(); 1]);
+        let encoding = Arc::new(arrow::array::StringArray::from(vec![
+            image
+                .encoding
+                .to_string();
+            1
+        ]));
 
-        (width, height, name)
+        let name = Arc::new(arrow::array::StringArray::from(vec![image.name.clone(); 1]));
+
+        let data: Arc<dyn arrow::array::Array> = match image.encoding {
+            Encoding::RGB8 => Arc::new(arrow::array::UInt8Array::from(image.data.into_u8()?)),
+            Encoding::BGR8 => Arc::new(arrow::array::UInt8Array::from(image.data.into_u8()?)),
+            Encoding::GRAY8 => Arc::new(arrow::array::UInt8Array::from(image.data.into_u8()?)),
+        };
+
+        Ok(vec![data, width, height, encoding, name])
     }
 
     /// Converts an `Image` into an Arrow `UnionArray`.
@@ -151,7 +152,6 @@ impl Image {
     ///
     /// ```
     /// use fastformat::image::Image;
-    /// use fastformat::image::ImageData;
     ///
     /// let data = vec![0; 640 * 480 * 3];
     /// let image = Image::new_bgr8(data, 640, 480, None).unwrap();
@@ -159,29 +159,14 @@ impl Image {
     /// let arrow_array = image.to_arrow().unwrap();
     /// ```
     pub fn to_arrow(self) -> Result<arrow::array::UnionArray> {
-        let ((width, height, name), encoding, data, datatype) = match self {
-            Image::ImageBGR8(image) => (
-                Self::get_image_details(&image),
-                arrow::array::StringArray::from(vec!["BGR8".to_string(); 1]),
-                arrow::array::UInt8Array::from(image.data),
-                arrow::datatypes::DataType::UInt8,
-            ),
-            Image::ImageRGB8(image) => (
-                Self::get_image_details(&image),
-                arrow::array::StringArray::from(vec!["RGB8".to_string(); 1]),
-                arrow::array::UInt8Array::from(image.data),
-                arrow::datatypes::DataType::UInt8,
-            ),
-            Image::ImageGray8(image) => (
-                Self::get_image_details(&image),
-                arrow::array::StringArray::from(vec!["GRAY8".to_string(); 1]),
-                arrow::array::UInt8Array::from(image.data),
-                arrow::datatypes::DataType::UInt8,
-            ),
-        };
-
         let type_ids = [].into_iter().collect::<arrow::buffer::ScalarBuffer<i8>>();
         let offsets = [].into_iter().collect::<arrow::buffer::ScalarBuffer<i32>>();
+
+        let datatype = match self.encoding {
+            Encoding::RGB8 => arrow::datatypes::DataType::UInt8,
+            Encoding::BGR8 => arrow::datatypes::DataType::UInt8,
+            Encoding::GRAY8 => arrow::datatypes::DataType::UInt8,
+        };
 
         let union_fields = [
             union_field(0, "data", datatype, false),
@@ -193,13 +178,7 @@ impl Image {
         .into_iter()
         .collect::<arrow::datatypes::UnionFields>();
 
-        let children: Vec<Arc<dyn arrow::array::Array>> = vec![
-            Arc::new(data),
-            Arc::new(width),
-            Arc::new(height),
-            Arc::new(encoding),
-            Arc::new(name),
-        ];
+        let children = Self::convert_image_details_to_arrow(self)?;
 
         arrow::array::UnionArray::try_new(union_fields, type_ids, Some(offsets), children)
             .wrap_err("Failed to create UnionArray width Image data.")

@@ -1,74 +1,73 @@
 use eyre::{Report, Result};
 
+use container::DataContainer;
+use encoding::Encoding;
+
 mod bgr8;
 mod gray8;
 mod rgb8;
 
 mod arrow;
+mod container;
+mod encoding;
 
 #[derive(Debug)]
-pub struct ImageData<T> {
-    data: Vec<T>,
+pub struct Image {
+    data: DataContainer,
 
     width: u32,
     height: u32,
 
-    name: Option<String>,
-}
+    encoding: Encoding,
 
-pub enum Image {
-    ImageRGB8(ImageData<u8>),
-    ImageBGR8(ImageData<u8>),
-    ImageGray8(ImageData<u8>),
+    name: Option<String>,
 }
 
 impl Image {
     pub fn as_ptr(&self) -> *const u8 {
-        match self {
-            Self::ImageRGB8(image) => image.data.as_ptr(),
-            Self::ImageBGR8(image) => image.data.as_ptr(),
-            Self::ImageGray8(image) => image.data.as_ptr(),
-        }
+        self.data.as_ptr()
     }
 
     pub fn to_rgb8(self) -> Result<Self> {
-        match self {
-            Self::ImageBGR8(image) => {
-                let mut data = image.data;
+        match self.encoding {
+            Encoding::BGR8 => {
+                let mut data = self.data.into_u8()?;
 
                 for i in (0..data.len()).step_by(3) {
                     data.swap(i, i + 2);
                 }
 
-                Ok(Self::ImageRGB8(ImageData {
-                    data,
-                    width: image.width,
-                    height: image.height,
-                    name: image.name.clone(),
-                }))
+                Ok(Image {
+                    data: DataContainer::from_u8(data),
+                    width: self.width,
+                    height: self.height,
+                    encoding: Encoding::RGB8,
+                    name: self.name.clone(),
+                })
             }
-            Self::ImageRGB8(_) => Ok(self),
+            Encoding::RGB8 => Ok(self),
             _ => Err(Report::msg("Can't convert image to RGB8")),
         }
     }
 
     pub fn to_bgr8(self) -> Result<Self> {
-        match self {
-            Self::ImageRGB8(image) => {
-                let mut data = image.data;
+        match self.encoding {
+            Encoding::RGB8 => {
+                let mut data = self.data.into_u8()?;
 
                 for i in (0..data.len()).step_by(3) {
                     data.swap(i, i + 2);
                 }
 
-                Ok(Self::ImageBGR8(ImageData {
-                    data,
-                    width: image.width,
-                    height: image.height,
-                    name: image.name.clone(),
-                }))
+                Ok(Image {
+                    data: DataContainer::from_u8(data),
+                    width: self.width,
+                    height: self.height,
+                    encoding: Encoding::BGR8,
+                    name: self.name.clone(),
+                })
             }
-            Self::ImageBGR8(_) => Ok(self),
+            Encoding::BGR8 => Ok(self),
             _ => Err(Report::msg("Can't convert image to BGR8")),
         }
     }

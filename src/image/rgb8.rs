@@ -1,5 +1,4 @@
-use super::{Image, ImageData};
-
+use super::{container::DataContainer, encoding::Encoding, Image};
 use eyre::{Context, Report, Result};
 
 impl Image {
@@ -38,12 +37,13 @@ impl Image {
             return Err(Report::msg("Invalid pixel data length."));
         }
 
-        Ok(Self::ImageRGB8(ImageData {
-            data,
+        Ok(Image {
+            data: DataContainer::from_u8(data),
             width,
             height,
+            encoding: Encoding::RGB8,
             name: name.map(|s| s.to_string()),
-        }))
+        })
     }
 
     /// Creates a new `Image` in RGB8 format from an ndarray.
@@ -114,10 +114,10 @@ impl Image {
     /// let ndarray = image.rgb8_to_ndarray().unwrap();
     /// ```
     pub fn rgb8_to_ndarray(self) -> Result<ndarray::Array<u8, ndarray::Ix3>> {
-        match self {
-                Self::ImageRGB8(image) => ndarray::Array::from_shape_vec(
-                    (image.height as usize, image.width as usize, 3),
-                    image.data,
+        match self.encoding {
+                Encoding::RGB8 => ndarray::Array::from_shape_vec(
+                    (self.height as usize, self.width as usize, 3),
+                    self.data.into_u8()?,
                 )
                 .wrap_err("Failed to reshape data into ndarray: width, height and RGB8 encoding doesn't match data data length."),
                 _ => Err(Report::msg("Image is not in RGB8 format")),
@@ -153,10 +153,10 @@ impl Image {
     /// let ndarray_view = image.rgb8_to_ndarray_view().unwrap();
     /// ```
     pub fn rgb8_to_ndarray_view(&self) -> Result<ndarray::ArrayView<u8, ndarray::Ix3>> {
-        match self {
-                Self::ImageRGB8(image) => ndarray::ArrayView::from_shape(
-                    (image.height as usize, image.width as usize, 3),
-                    &image.data,
+        match self.encoding {
+                Encoding::RGB8 => ndarray::ArrayView::from_shape(
+                    (self.height as usize, self.width as usize, 3),
+                    self.data.as_u8()?,
                 )
                 .wrap_err("Failed to reshape data into ndarray: width, height and RGB8 encoding doesn't match data data length."),
                 _ => Err(Report::msg("Image is not in RGB8 format")),
@@ -192,10 +192,10 @@ impl Image {
     /// let ndarray_view_mut = image.rgb8_to_ndarray_view_mut().unwrap();
     /// ```
     pub fn rgb8_to_ndarray_view_mut(&mut self) -> Result<ndarray::ArrayViewMut<u8, ndarray::Ix3>> {
-        match self {
-                Self::ImageRGB8(image) => ndarray::ArrayViewMut::from_shape(
-                    (image.height as usize, image.width as usize, 3),
-                    &mut image.data,
+        match self.encoding {
+                Encoding::RGB8 => ndarray::ArrayViewMut::from_shape(
+                    (self.height as usize, self.width as usize, 3),
+                    self.data.as_mut_u8()?,
                 )
                 .wrap_err("Failed to reshape data into ndarray: width, height and RGB8 encoding doesn't match data data length."),
                 _ => Err(Report::msg("Image is not in RGB8 format")),
