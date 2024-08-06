@@ -35,7 +35,7 @@ impl Image {
     pub fn new_bgr8(data: Vec<u8>, width: u32, height: u32, name: Option<&str>) -> Result<Self> {
         if width * height * 3 != data.len() as u32 {
             return Err(Report::msg(
-                "Width, height and BGR8 encoding doesn't match data data length.",
+                "Width, height and BGR8 encoding doesn't match data length.",
             ));
         }
 
