@@ -40,7 +40,6 @@ impl Image {
     /// # Example
     ///
     /// ```
-    /// use arrow::array::UnionArray;
     /// use fastformat::image::Image;
     ///
     /// let data = vec![0; 27]; // 3x3 image with 3 bytes per pixel
@@ -187,7 +186,7 @@ impl Image {
 
 mod tests {
     #[test]
-    fn test_arrow_conversion() {
+    fn test_arrow_zero_copy_conversion() {
         use crate::image::Image;
 
         let flat_image = vec![0; 27];
