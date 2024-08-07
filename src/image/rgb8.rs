@@ -111,9 +111,9 @@ impl Image {
     /// let data = vec![0; 27]; // 3x3 image with 3 bytes per pixel
     /// let image = Image::new_rgb8(data, 3, 3, Some("example")).unwrap();
     ///
-    /// let ndarray = image.rgb8_to_ndarray().unwrap();
+    /// let ndarray = image.rgb8_into_ndarray().unwrap();
     /// ```
-    pub fn rgb8_to_ndarray(self) -> Result<ndarray::Array<u8, ndarray::Ix3>> {
+    pub fn rgb8_into_ndarray(self) -> Result<ndarray::Array<u8, ndarray::Ix3>> {
         match self.encoding {
                 Encoding::RGB8 => ndarray::Array::from_shape_vec(
                     (self.height as usize, self.width as usize, 3),
@@ -150,13 +150,13 @@ impl Image {
     /// let data = vec![0; 27]; // 3x3 image with 3 bytes per pixel
     /// let image = Image::new_rgb8(data, 3, 3, Some("example")).unwrap();
     ///
-    /// let ndarray_view = image.rgb8_to_ndarray_view().unwrap();
+    /// let ndarray_view = image.rgb8_into_ndarray_view().unwrap();
     /// ```
-    pub fn rgb8_to_ndarray_view(&self) -> Result<ndarray::ArrayView<u8, ndarray::Ix3>> {
+    pub fn rgb8_into_ndarray_view(&self) -> Result<ndarray::ArrayView<u8, ndarray::Ix3>> {
         match self.encoding {
                 Encoding::RGB8 => ndarray::ArrayView::from_shape(
                     (self.height as usize, self.width as usize, 3),
-                    self.data.as_u8()?,
+                    self.data.to_u8()?,
                 )
                 .wrap_err("Failed to reshape data into ndarray: width, height and RGB8 encoding doesn't match data data length."),
                 _ => Err(Report::msg("Image is not in RGB8 format")),
@@ -189,13 +189,15 @@ impl Image {
     /// let data = vec![0; 27]; // 3x3 image with 3 bytes per pixel
     /// let mut image = Image::new_rgb8(data, 3, 3, Some("example")).unwrap();
     ///
-    /// let ndarray_view_mut = image.rgb8_to_ndarray_view_mut().unwrap();
+    /// let ndarray_view_mut = image.rgb8_into_ndarray_view_mut().unwrap();
     /// ```
-    pub fn rgb8_to_ndarray_view_mut(&mut self) -> Result<ndarray::ArrayViewMut<u8, ndarray::Ix3>> {
+    pub fn rgb8_into_ndarray_view_mut(
+        &mut self,
+    ) -> Result<ndarray::ArrayViewMut<u8, ndarray::Ix3>> {
         match self.encoding {
                 Encoding::RGB8 => ndarray::ArrayViewMut::from_shape(
                     (self.height as usize, self.width as usize, 3),
-                    self.data.as_mut_u8()?,
+                    self.data.to_mut_u8()?,
                 )
                 .wrap_err("Failed to reshape data into ndarray: width, height and RGB8 encoding doesn't match data data length."),
                 _ => Err(Report::msg("Image is not in RGB8 format")),
@@ -225,36 +227,36 @@ mod tests {
     }
 
     #[test]
-    fn test_rgb8_to_ndarray() {
+    fn test_rgb8_into_ndarray() {
         use crate::image::Image;
 
         let flat_image = vec![0; 27];
 
         let image = Image::new_rgb8(flat_image, 3, 3, Some("camera.test")).unwrap();
 
-        image.rgb8_to_ndarray().unwrap();
+        image.rgb8_into_ndarray().unwrap();
     }
 
     #[test]
-    fn test_rgb8_to_ndarray_view() {
+    fn test_rgb8_into_ndarray_view() {
         use crate::image::Image;
 
         let flat_image = vec![0; 27];
 
         let image = Image::new_rgb8(flat_image, 3, 3, Some("camera.test")).unwrap();
 
-        image.rgb8_to_ndarray_view().unwrap();
+        image.rgb8_into_ndarray_view().unwrap();
     }
 
     #[test]
-    fn test_rgb8_to_ndarray_view_mut() {
+    fn test_rgb8_into_ndarray_view_mut() {
         use crate::image::Image;
 
         let flat_image = vec![0; 27];
 
         let mut image = Image::new_rgb8(flat_image, 3, 3, Some("camera.test")).unwrap();
 
-        image.rgb8_to_ndarray_view_mut().unwrap();
+        image.rgb8_into_ndarray_view_mut().unwrap();
     }
 
     #[test]
@@ -267,7 +269,7 @@ mod tests {
         let rgb8_image = Image::new_rgb8(flat_image, 3, 3, None).unwrap();
         let image_buffer_address = rgb8_image.as_ptr();
 
-        let rgb8_ndarray = rgb8_image.rgb8_to_ndarray().unwrap();
+        let rgb8_ndarray = rgb8_image.rgb8_into_ndarray().unwrap();
         let ndarray_buffer_address = rgb8_ndarray.as_ptr();
 
         let final_image = Image::rgb8_from_ndarray(rgb8_ndarray, None).unwrap();

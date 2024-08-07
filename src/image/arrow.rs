@@ -44,7 +44,7 @@ impl Image {
     ///
     /// let data = vec![0; 27]; // 3x3 image with 3 bytes per pixel
     /// let image = Image::new_bgr8(data, 3, 3, None).unwrap();
-    /// let array = image.to_arrow().unwrap();
+    /// let array = image.into_arrow().unwrap();
     ///
     /// let image = Image::from_arrow(array).unwrap();
     /// ```
@@ -106,7 +106,7 @@ impl Image {
         }
     }
 
-    fn convert_image_details_to_arrow(image: Image) -> Result<Vec<Arc<dyn arrow::array::Array>>> {
+    fn convert_image_details_into_arrow(image: Image) -> Result<Vec<Arc<dyn arrow::array::Array>>> {
         let width = Arc::new(arrow::array::UInt32Array::from(vec![image.width; 1]));
         let height = Arc::new(arrow::array::UInt32Array::from(vec![image.height; 1]));
 
@@ -155,9 +155,9 @@ impl Image {
     /// let data = vec![0; 640 * 480 * 3];
     /// let image = Image::new_bgr8(data, 640, 480, None).unwrap();
     ///
-    /// let arrow_array = image.to_arrow().unwrap();
+    /// let arrow_array = image.into_arrow().unwrap();
     /// ```
-    pub fn to_arrow(self) -> Result<arrow::array::UnionArray> {
+    pub fn into_arrow(self) -> Result<arrow::array::UnionArray> {
         let type_ids = [].into_iter().collect::<arrow::buffer::ScalarBuffer<i8>>();
         let offsets = [].into_iter().collect::<arrow::buffer::ScalarBuffer<i32>>();
 
@@ -177,7 +177,7 @@ impl Image {
         .into_iter()
         .collect::<arrow::datatypes::UnionFields>();
 
-        let children = Self::convert_image_details_to_arrow(self)?;
+        let children = Self::convert_image_details_into_arrow(self)?;
 
         arrow::array::UnionArray::try_new(union_fields, type_ids, Some(offsets), children)
             .wrap_err("Failed to create UnionArray with Image data.")
@@ -195,7 +195,7 @@ mod tests {
         let bgr8_image = Image::new_bgr8(flat_image, 3, 3, None).unwrap();
         let image_buffer_address = bgr8_image.as_ptr();
 
-        let arrow_image = bgr8_image.to_arrow().unwrap();
+        let arrow_image = bgr8_image.into_arrow().unwrap();
 
         let new_image = Image::from_arrow(arrow_image).unwrap();
         let final_image_buffer = new_image.as_ptr();
