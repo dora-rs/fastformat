@@ -55,12 +55,12 @@ impl BBox {
     )> {
         match self.encoding {
             Encoding::XYXY => {
-                let data = ndarray::ArrayView::from_shape((self.data.len()), &self.data)
+                let data = ndarray::ArrayView::from_shape(self.data.len(), &self.data)
                     .wrap_err("Failed to reshape data into ndarray")?;
                 let confidence =
-                    ndarray::ArrayView::from_shape((self.confidence.len()), &self.confidence)
+                    ndarray::ArrayView::from_shape(self.confidence.len(), &self.confidence)
                         .wrap_err("Failed to reshape data into ndarray")?;
-                let label = ndarray::ArrayView::from_shape((self.label.len()), &self.label)
+                let label = ndarray::ArrayView::from_shape(self.label.len(), &self.label)
                     .wrap_err("Failed to reshape data into ndarray")?;
 
                 Ok((data, confidence, label))
@@ -78,14 +78,12 @@ impl BBox {
     )> {
         match self.encoding {
             Encoding::XYXY => {
-                let data = ndarray::ArrayViewMut::from_shape((self.data.len()), &mut self.data)
+                let data = ndarray::ArrayViewMut::from_shape(self.data.len(), &mut self.data)
                     .wrap_err("Failed to reshape data into ndarray")?;
-                let confidence = ndarray::ArrayViewMut::from_shape(
-                    (self.confidence.len()),
-                    &mut self.confidence,
-                )
-                .wrap_err("Failed to reshape data into ndarray")?;
-                let label = ndarray::ArrayViewMut::from_shape((self.label.len()), &mut self.label)
+                let confidence =
+                    ndarray::ArrayViewMut::from_shape(self.confidence.len(), &mut self.confidence)
+                        .wrap_err("Failed to reshape data into ndarray")?;
+                let label = ndarray::ArrayViewMut::from_shape(self.label.len(), &mut self.label)
                     .wrap_err("Failed to reshape data into ndarray")?;
 
                 Ok((data, confidence, label))
@@ -113,8 +111,8 @@ mod tests {
 
         use crate::bbox::BBox;
 
-        let data = Array1::<f32>::zeros((8));
-        let confidence = Array1::<f32>::ones((2));
+        let data = Array1::<f32>::zeros(8);
+        let confidence = Array1::<f32>::ones(2);
         let label = Array1::<String>::from_vec(vec!["cat".to_string(), "car".to_string()]);
 
         BBox::xyxy_from_ndarray(data, confidence, label).unwrap();
@@ -170,13 +168,13 @@ mod tests {
         let label = vec!["cat".to_string()];
 
         let bbox = BBox::new_xyxy(flat_bbox, confidence, label).unwrap();
-        let bbox_buffer_address = bbox.data().as_ptr();
+        let bbox_buffer_address = bbox.data.as_ptr();
 
         let (data, confidence, label) = bbox.xyxy_to_ndarray().unwrap();
         let ndarray_buffer_address = data.as_ptr();
 
         let final_bbox = BBox::xyxy_from_ndarray(data, confidence, label).unwrap();
-        let final_bbox_buffer_address = final_bbox.data().as_ptr();
+        let final_bbox_buffer_address = final_bbox.data.as_ptr();
 
         assert_eq!(original_buffer_address, bbox_buffer_address);
         assert_eq!(bbox_buffer_address, ndarray_buffer_address);

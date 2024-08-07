@@ -1,4 +1,4 @@
-use eyre::{ContextCompat, Report, Result};
+use eyre::{ContextCompat, Result};
 
 use encoding::Encoding;
 
@@ -10,17 +10,13 @@ mod arrow;
 mod encoding;
 
 pub struct BBox {
-    data: Vec<f32>,
-    confidence: Vec<f32>,
-    label: Vec<String>,
-    encoding: Encoding,
+    pub data: Vec<f32>,
+    pub confidence: Vec<f32>,
+    pub label: Vec<String>,
+    pub encoding: Encoding,
 }
 
 impl BBox {
-    pub fn data(&self) -> &Vec<f32> {
-        &self.data
-    }
-
     pub fn to_xyxy(self) -> Result<Self> {
         match self.encoding {
             Encoding::XYWH => {
@@ -109,11 +105,11 @@ mod tests {
 
         let bbox = BBox::new_xyxy(flat_bbox, confidence, label).unwrap();
         let final_bbox = bbox.to_xywh().unwrap();
-        let final_bbox_data = final_bbox.data();
+        let final_bbox_data = final_bbox.data;
 
         let expected_bbox = vec![1.0, 1.0, 1.0, 1.0];
 
-        assert_eq!(&expected_bbox, final_bbox_data);
+        assert_eq!(expected_bbox, final_bbox_data);
     }
 
     #[test]
@@ -126,10 +122,10 @@ mod tests {
 
         let bbox = BBox::new_xywh(flat_bbox, confidence, label).unwrap();
         let final_bbox = bbox.to_xyxy().unwrap();
-        let final_bbox_data = final_bbox.data();
+        let final_bbox_data = final_bbox.data;
 
         let expected_bbox = vec![1.0, 1.0, 2.0, 2.0];
 
-        assert_eq!(&expected_bbox, final_bbox_data);
+        assert_eq!(expected_bbox, final_bbox_data);
     }
 }

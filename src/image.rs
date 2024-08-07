@@ -13,23 +13,19 @@ mod encoding;
 
 #[derive(Debug)]
 pub struct Image {
-    data: DataContainer,
+    pub data: DataContainer,
 
-    width: u32,
-    height: u32,
+    pub width: u32,
+    pub height: u32,
 
-    encoding: Encoding,
+    pub encoding: Encoding,
 
-    name: Option<String>,
+    pub name: Option<String>,
 }
 
 impl Image {
     pub fn as_ptr(&self) -> *const u8 {
         self.data.as_ptr()
-    }
-
-    pub fn data(&self) -> &DataContainer {
-        &self.data
     }
 
     pub fn to_rgb8(self) -> Result<Self> {
@@ -86,7 +82,7 @@ mod tests {
         let image = Image::new_rgb8(flat_image, 3, 3, Some("camera.test")).unwrap();
 
         let final_image = image.to_bgr8().unwrap();
-        let final_image_data = final_image.data().as_u8().unwrap();
+        let final_image_data = final_image.data.as_u8().unwrap();
 
         let expected_image = vec![
             2, 1, 0, 5, 4, 3, 8, 7, 6, 11, 10, 9, 14, 13, 12, 17, 16, 15, 20, 19, 18, 23, 22, 21,
@@ -104,7 +100,7 @@ mod tests {
         let image = Image::new_bgr8(flat_image, 3, 3, Some("camera.test")).unwrap();
 
         let final_image = image.to_rgb8().unwrap();
-        let final_image_data = final_image.data().as_u8().unwrap();
+        let final_image_data = final_image.data.as_u8().unwrap();
 
         let expected_image = vec![
             2, 1, 0, 5, 4, 3, 8, 7, 6, 11, 10, 9, 14, 13, 12, 17, 16, 15, 20, 19, 18, 23, 22, 21,

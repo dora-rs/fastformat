@@ -180,7 +180,7 @@ impl Image {
         let children = Self::convert_image_details_to_arrow(self)?;
 
         arrow::array::UnionArray::try_new(union_fields, type_ids, Some(offsets), children)
-            .wrap_err("Failed to create UnionArray width Image data.")
+            .wrap_err("Failed to create UnionArray with Image data.")
     }
 }
 
