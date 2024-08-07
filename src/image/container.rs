@@ -18,13 +18,13 @@ impl DataContainer {
         }
     }
 
-    pub fn to_u8(&self) -> Result<&Vec<u8>> {
+    pub fn as_u8(&self) -> Result<&Vec<u8>> {
         match self {
             Self::U8Data(data) => Ok(data),
         }
     }
 
-    pub fn to_mut_u8(&mut self) -> Result<&mut Vec<u8>> {
+    pub fn as_mut_u8(&mut self) -> Result<&mut Vec<u8>> {
         match self {
             Self::U8Data(data) => Ok(data),
         }

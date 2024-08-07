@@ -12,6 +12,7 @@ impl BBox {
         lookup_table: &HashMap<String, i8>,
     ) -> Result<Vec<G>> {
         let arrow = column_by_name::<arrow::array::PrimitiveArray<T>>(array, field, lookup_table)?;
+
         let ptr = arrow.values().as_ptr();
         let len = arrow.len();
 
@@ -69,6 +70,7 @@ impl BBox {
         )?;
 
         unsafe {
+            mem::ManuallyDrop::new(array);
             let array = mem::ManuallyDrop::new(array);
 
             let data = Self::arrow_to_vec::<arrow::datatypes::Float32Type, f32>(

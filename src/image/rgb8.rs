@@ -156,7 +156,7 @@ impl Image {
         match self.encoding {
                 Encoding::RGB8 => ndarray::ArrayView::from_shape(
                     (self.height as usize, self.width as usize, 3),
-                    self.data.to_u8()?,
+                    self.data.as_u8()?,
                 )
                 .wrap_err("Failed to reshape data into ndarray: width, height and RGB8 encoding doesn't match data data length."),
                 _ => Err(Report::msg("Image is not in RGB8 format")),
@@ -197,7 +197,7 @@ impl Image {
         match self.encoding {
                 Encoding::RGB8 => ndarray::ArrayViewMut::from_shape(
                     (self.height as usize, self.width as usize, 3),
-                    self.data.to_mut_u8()?,
+                    self.data.as_mut_u8()?,
                 )
                 .wrap_err("Failed to reshape data into ndarray: width, height and RGB8 encoding doesn't match data data length."),
                 _ => Err(Report::msg("Image is not in RGB8 format")),

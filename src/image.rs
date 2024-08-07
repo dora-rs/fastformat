@@ -82,7 +82,7 @@ mod tests {
         let image = Image::new_rgb8(flat_image, 3, 3, Some("camera.test")).unwrap();
 
         let final_image = image.into_bgr8().unwrap();
-        let final_image_data = final_image.data.to_u8().unwrap();
+        let final_image_data = final_image.data.as_u8().unwrap();
 
         let expected_image = vec![
             2, 1, 0, 5, 4, 3, 8, 7, 6, 11, 10, 9, 14, 13, 12, 17, 16, 15, 20, 19, 18, 23, 22, 21,
@@ -100,7 +100,7 @@ mod tests {
         let image = Image::new_bgr8(flat_image, 3, 3, Some("camera.test")).unwrap();
 
         let final_image = image.into_rgb8().unwrap();
-        let final_image_data = final_image.data.to_u8().unwrap();
+        let final_image_data = final_image.data.as_u8().unwrap();
 
         let expected_image = vec![
             2, 1, 0, 5, 4, 3, 8, 7, 6, 11, 10, 9, 14, 13, 12, 17, 16, 15, 20, 19, 18, 23, 22, 21,
