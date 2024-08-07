@@ -13,7 +13,7 @@ fn camera_read() -> ndarray::Array<u8, ndarray::Ix3> {
 
     let image = Image::new_bgr8(flat_image, 3, 3, None).unwrap();
 
-    return image.bgr8_to_ndarray().unwrap();
+    return image.bgr8_into_ndarray().unwrap();
 }
 
 fn image_show(_frame: ndarray::ArrayView<u8, ndarray::Ix3>) {
@@ -40,7 +40,7 @@ fn main() {
     let image = Image::bgr8_from_ndarray(frame, Some("camera.left")).unwrap();
 
     // Convert to RGB8, apply some filter (Black and White).
-    let mut frame = image.to_rgb8().unwrap().rgb8_to_ndarray().unwrap();
+    let mut frame = image.into_rgb8().unwrap().rgb8_into_ndarray().unwrap();
 
     for i in 0..frame.shape()[0] {
         for j in 0..frame.shape()[1] {
@@ -62,7 +62,7 @@ fn main() {
     let image = Image::rgb8_from_ndarray(frame, Some("camera.left.baw")).unwrap();
 
     // Plot the image, you may only need a ndarray_view
-    image_show(image.rgb8_to_ndarray_view().unwrap());
+    image_show(image.rgb8_into_ndarray_view().unwrap());
 
-    send_output(image.to_arrow().unwrap());
+    send_output(image.into_arrow().unwrap());
 }

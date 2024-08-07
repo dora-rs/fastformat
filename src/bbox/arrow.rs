@@ -12,13 +12,14 @@ impl BBox {
         lookup_table: &HashMap<String, i8>,
     ) -> Result<Vec<G>> {
         let arrow = column_by_name::<arrow::array::PrimitiveArray<T>>(array, field, lookup_table)?;
+
         let ptr = arrow.values().as_ptr();
         let len = arrow.len();
 
         Ok(Vec::from_raw_parts(ptr as *mut G, len, len))
     }
 
-    fn convert_bbox_details_to_arrow(bbox: BBox) -> Result<Vec<Arc<dyn arrow::array::Array>>> {
+    fn convert_bbox_details_into_arrow(bbox: BBox) -> Result<Vec<Arc<dyn arrow::array::Array>>> {
         let data = Arc::new(arrow::array::Float32Array::from(bbox.data));
         let confidence = Arc::new(arrow::array::Float32Array::from(bbox.confidence));
         let label = Arc::new(arrow::array::StringArray::from(bbox.label));
@@ -31,7 +32,7 @@ impl BBox {
         Ok(vec![data, confidence, label, encoding])
     }
 
-    pub fn to_arrow(self) -> Result<arrow::array::UnionArray> {
+    pub fn into_arrow(self) -> Result<arrow::array::UnionArray> {
         let type_ids = [].into_iter().collect::<arrow::buffer::ScalarBuffer<i8>>();
         let offsets = [].into_iter().collect::<arrow::buffer::ScalarBuffer<i32>>();
 
@@ -44,7 +45,7 @@ impl BBox {
         .into_iter()
         .collect::<arrow::datatypes::UnionFields>();
 
-        let children = Self::convert_bbox_details_to_arrow(self)?;
+        let children = Self::convert_bbox_details_into_arrow(self)?;
 
         arrow::array::UnionArray::try_new(union_fields, type_ids, Some(offsets), children)
             .wrap_err("Failed to create UnionArray with BBox data.")
@@ -69,6 +70,7 @@ impl BBox {
         )?;
 
         unsafe {
+            mem::ManuallyDrop::new(array);
             let array = mem::ManuallyDrop::new(array);
 
             let data = Self::arrow_to_vec::<arrow::datatypes::Float32Type, f32>(
@@ -114,7 +116,7 @@ mod tests {
         let xyxy_bbox = BBox::new_xyxy(flat_bbox, confidence, label).unwrap();
         let bbox_buffer_address = xyxy_bbox.data.as_ptr();
 
-        let arrow_bbox = xyxy_bbox.to_arrow().unwrap();
+        let arrow_bbox = xyxy_bbox.into_arrow().unwrap();
 
         let new_bbox = BBox::from_arrow(arrow_bbox).unwrap();
         let final_bbox_buffer = new_bbox.data.as_ptr();

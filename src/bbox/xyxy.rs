@@ -29,7 +29,7 @@ impl BBox {
         )
     }
 
-    pub fn xyxy_to_ndarray(
+    pub fn xyxy_into_ndarray(
         self,
     ) -> Result<(
         ndarray::Array<f32, ndarray::Ix1>,
@@ -46,7 +46,7 @@ impl BBox {
         }
     }
 
-    pub fn xyxy_to_ndarray_view(
+    pub fn xyxy_into_ndarray_view(
         &self,
     ) -> Result<(
         ndarray::ArrayView<f32, ndarray::Ix1>,
@@ -69,7 +69,7 @@ impl BBox {
         }
     }
 
-    pub fn xyxy_to_ndarray_view_mut(
+    pub fn xyxy_into_ndarray_view_mut(
         &mut self,
     ) -> Result<(
         ndarray::ArrayViewMut<f32, ndarray::Ix1>,
@@ -119,7 +119,7 @@ mod tests {
     }
 
     #[test]
-    fn test_xyxy_to_ndarray() {
+    fn test_xyxy_into_ndarray() {
         use crate::bbox::BBox;
 
         let flat_bbox = vec![1.0, 1.0, 2.0, 2.0];
@@ -128,11 +128,11 @@ mod tests {
 
         let bbox = BBox::new_xyxy(flat_bbox, confidence, label).unwrap();
 
-        bbox.xyxy_to_ndarray().unwrap();
+        bbox.xyxy_into_ndarray().unwrap();
     }
 
     #[test]
-    fn test_xyxy_to_ndarray_view() {
+    fn test_xyxy_into_ndarray_view() {
         use crate::bbox::BBox;
 
         let flat_bbox = vec![1.0, 1.0, 2.0, 2.0];
@@ -141,11 +141,11 @@ mod tests {
 
         let bbox = BBox::new_xyxy(flat_bbox, confidence, label).unwrap();
 
-        bbox.xyxy_to_ndarray_view().unwrap();
+        bbox.xyxy_into_ndarray_view().unwrap();
     }
 
     #[test]
-    fn test_xyxy_to_ndarray_view_mut() {
+    fn test_xyxy_into_ndarray_view_mut() {
         use crate::bbox::BBox;
 
         let flat_bbox = vec![1.0, 1.0, 2.0, 2.0];
@@ -154,7 +154,7 @@ mod tests {
 
         let mut bbox = BBox::new_xyxy(flat_bbox, confidence, label).unwrap();
 
-        bbox.xyxy_to_ndarray_view_mut().unwrap();
+        bbox.xyxy_into_ndarray_view_mut().unwrap();
     }
 
     #[test]
@@ -170,7 +170,7 @@ mod tests {
         let bbox = BBox::new_xyxy(flat_bbox, confidence, label).unwrap();
         let bbox_buffer_address = bbox.data.as_ptr();
 
-        let (data, confidence, label) = bbox.xyxy_to_ndarray().unwrap();
+        let (data, confidence, label) = bbox.xyxy_into_ndarray().unwrap();
         let ndarray_buffer_address = data.as_ptr();
 
         let final_bbox = BBox::xyxy_from_ndarray(data, confidence, label).unwrap();

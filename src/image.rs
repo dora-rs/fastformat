@@ -28,7 +28,7 @@ impl Image {
         self.data.as_ptr()
     }
 
-    pub fn to_rgb8(self) -> Result<Self> {
+    pub fn into_rgb8(self) -> Result<Self> {
         match self.encoding {
             Encoding::BGR8 => {
                 let mut data = self.data.into_u8()?;
@@ -50,7 +50,7 @@ impl Image {
         }
     }
 
-    pub fn to_bgr8(self) -> Result<Self> {
+    pub fn into_bgr8(self) -> Result<Self> {
         match self.encoding {
             Encoding::RGB8 => {
                 let mut data = self.data.into_u8()?;
@@ -75,13 +75,13 @@ impl Image {
 
 mod tests {
     #[test]
-    fn test_rgb8_to_bgr8() {
+    fn test_rgb8_into_bgr8() {
         use crate::image::Image;
 
         let flat_image = (0..27).collect::<Vec<u8>>();
         let image = Image::new_rgb8(flat_image, 3, 3, Some("camera.test")).unwrap();
 
-        let final_image = image.to_bgr8().unwrap();
+        let final_image = image.into_bgr8().unwrap();
         let final_image_data = final_image.data.as_u8().unwrap();
 
         let expected_image = vec![
@@ -93,13 +93,13 @@ mod tests {
     }
 
     #[test]
-    fn test_bgr8_to_rgb8() {
+    fn test_bgr8_into_rgb8() {
         use crate::image::Image;
 
         let flat_image = (0..27).collect::<Vec<u8>>();
         let image = Image::new_bgr8(flat_image, 3, 3, Some("camera.test")).unwrap();
 
-        let final_image = image.to_rgb8().unwrap();
+        let final_image = image.into_rgb8().unwrap();
         let final_image_data = final_image.data.as_u8().unwrap();
 
         let expected_image = vec![

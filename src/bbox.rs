@@ -17,7 +17,7 @@ pub struct BBox {
 }
 
 impl BBox {
-    pub fn to_xyxy(self) -> Result<Self> {
+    pub fn into_xyxy(self) -> Result<Self> {
         match self.encoding {
             Encoding::XYWH => {
                 let mut data = self.data;
@@ -55,7 +55,7 @@ impl BBox {
         }
     }
 
-    pub fn to_xywh(self) -> Result<Self> {
+    pub fn into_xywh(self) -> Result<Self> {
         match self.encoding {
             Encoding::XYXY => {
                 let mut data = self.data;
@@ -96,7 +96,7 @@ impl BBox {
 
 mod tests {
     #[test]
-    fn test_xyxy_to_xywh() {
+    fn test_xyxy_into_xywh() {
         use crate::bbox::BBox;
 
         let flat_bbox = vec![1.0, 1.0, 2.0, 2.0];
@@ -104,7 +104,7 @@ mod tests {
         let label = vec!["cat".to_string()];
 
         let bbox = BBox::new_xyxy(flat_bbox, confidence, label).unwrap();
-        let final_bbox = bbox.to_xywh().unwrap();
+        let final_bbox = bbox.into_xywh().unwrap();
         let final_bbox_data = final_bbox.data;
 
         let expected_bbox = vec![1.0, 1.0, 1.0, 1.0];
@@ -113,7 +113,7 @@ mod tests {
     }
 
     #[test]
-    fn test_xywh_to_xyxy() {
+    fn test_xywh_into_xyxy() {
         use crate::bbox::BBox;
 
         let flat_bbox = vec![1.0, 1.0, 1.0, 1.0];
@@ -121,7 +121,7 @@ mod tests {
         let label = vec!["cat".to_string()];
 
         let bbox = BBox::new_xywh(flat_bbox, confidence, label).unwrap();
-        let final_bbox = bbox.to_xyxy().unwrap();
+        let final_bbox = bbox.into_xyxy().unwrap();
         let final_bbox_data = final_bbox.data;
 
         let expected_bbox = vec![1.0, 1.0, 2.0, 2.0];
