@@ -21,8 +21,14 @@ Numpy, or Arrow, without unnecessary copies.
 ## DataTypes
 
 - **Image**: (Arrow representation is a **UnionArray**),
-    - Field "data': UintXArray (e.g [0, 255, 0, 255, 0, 255, ...])
+    - Field "data": UintXArray (e.g [0, 255, 0, 255, 0, 255, ...])
     - Field "width": Uint32Array (e.g [1280])
     - Field "height": Uint32Array (e.g [720])
     - Field "encoding": StringArray (e.g ["RGB8"])
     - Field "name" (Optional): StringArray (e.g,["image.front_camera"] or [None])
+
+- **BBox**: (Arrow representation is a **UnionArray**),
+    - Field "data": Float32Array (e.g [0.0f32, 1.0f32, ...])
+    - Field "confidence": Float32Array (e.g [0.98f32, 0.76f32, ...])
+    - Field "label": StringArray (e.g ["cat", "car", ..."])
+    - Field "encoding": StringArray (e.g ["XYXY"] or ["XYWH"])

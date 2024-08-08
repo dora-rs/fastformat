@@ -111,9 +111,9 @@ impl Image {
     /// let data = vec![0; 9]; // 3x3 image with 1 byte per pixel
     /// let image = Image::new_gray8(data, 3, 3, Some("example")).unwrap();
     ///
-    /// let ndarray = image.gray8_to_ndarray().unwrap();
+    /// let ndarray = image.gray8_into_ndarray().unwrap();
     /// ```
-    pub fn gray8_to_ndarray(self) -> Result<ndarray::Array<u8, ndarray::Ix2>> {
+    pub fn gray8_into_ndarray(self) -> Result<ndarray::Array<u8, ndarray::Ix2>> {
         match self.encoding {
                 Encoding::GRAY8 => ndarray::Array::from_shape_vec(
                     (self.height as usize, self.width as usize),
@@ -150,9 +150,9 @@ impl Image {
     /// let data = vec![0; 9]; // 3x3 image with 1 byte per pixel
     /// let image = Image::new_gray8(data, 3, 3, Some("example")).unwrap();
     ///
-    /// let ndarray_view = image.gray8_to_ndarray_view().unwrap();
+    /// let ndarray_view = image.gray8_into_ndarray_view().unwrap();
     /// ```
-    pub fn gray8_to_ndarray_view(&self) -> Result<ndarray::ArrayView<u8, ndarray::Ix2>> {
+    pub fn gray8_into_ndarray_view(&self) -> Result<ndarray::ArrayView<u8, ndarray::Ix2>> {
         match self.encoding {
                 Encoding::GRAY8 => ndarray::ArrayView::from_shape(
                     (self.height as usize, self.width as usize),
@@ -189,9 +189,11 @@ impl Image {
     /// let data = vec![0; 9]; // 3x3 image with 1 byte per pixel
     /// let mut image = Image::new_gray8(data, 3, 3, Some("example")).unwrap();
     ///
-    /// let ndarray_view_mut = image.gray8_to_ndarray_view_mut().unwrap();
+    /// let ndarray_view_mut = image.gray8_into_ndarray_view_mut().unwrap();
     /// ```
-    pub fn gray8_to_ndarray_view_mut(&mut self) -> Result<ndarray::ArrayViewMut<u8, ndarray::Ix2>> {
+    pub fn gray8_into_ndarray_view_mut(
+        &mut self,
+    ) -> Result<ndarray::ArrayViewMut<u8, ndarray::Ix2>> {
         match self.encoding {
                 Encoding::GRAY8 => ndarray::ArrayViewMut::from_shape(
                     (self.height as usize, self.width as usize),
@@ -225,36 +227,36 @@ mod test {
     }
 
     #[test]
-    fn test_gray8_to_ndarray() {
+    fn test_gray8_into_ndarray() {
         use crate::image::Image;
 
         let flat_image = (1..10).collect::<Vec<u8>>();
 
         let image = Image::new_gray8(flat_image, 3, 3, Some("camera.test")).unwrap();
 
-        image.gray8_to_ndarray().unwrap();
+        image.gray8_into_ndarray().unwrap();
     }
 
     #[test]
-    fn test_gray8_to_ndarray_view() {
+    fn test_gray8_into_ndarray_view() {
         use crate::image::Image;
 
         let flat_image = (1..10).collect::<Vec<u8>>();
 
         let image = Image::new_gray8(flat_image, 3, 3, Some("camera.test")).unwrap();
 
-        image.gray8_to_ndarray_view().unwrap();
+        image.gray8_into_ndarray_view().unwrap();
     }
 
     #[test]
-    fn test_gray8_to_ndarray_view_mut() {
+    fn test_gray8_into_ndarray_view_mut() {
         use crate::image::Image;
 
         let flat_image = (1..10).collect::<Vec<u8>>();
 
         let mut image = Image::new_gray8(flat_image, 3, 3, Some("camera.test")).unwrap();
 
-        image.gray8_to_ndarray_view_mut().unwrap();
+        image.gray8_into_ndarray_view_mut().unwrap();
     }
 
     #[test]
@@ -267,7 +269,7 @@ mod test {
         let gray8_image = Image::new_gray8(flat_image, 3, 3, None).unwrap();
         let image_buffer_address = gray8_image.as_ptr();
 
-        let gray8_ndarray = gray8_image.gray8_to_ndarray().unwrap();
+        let gray8_ndarray = gray8_image.gray8_into_ndarray().unwrap();
         let ndarray_buffer_address = gray8_ndarray.as_ptr();
 
         let final_image = Image::gray8_from_ndarray(gray8_ndarray, None).unwrap();
