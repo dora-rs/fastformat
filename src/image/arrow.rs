@@ -1,22 +1,11 @@
-use crate::arrow::{column_by_name, union_field, union_lookup_table};
+use crate::arrow::{arrow_union_into_map, get_primitive_array_from_map, get_utf8_array_from_map};
 
 use super::{container::DataContainer, encoding::Encoding, Image};
-use eyre::{Context, Report, Result};
+use eyre::{Context, ContextCompat, Report, Result};
 
-use std::{collections::HashMap, mem, sync::Arc};
+use std::sync::Arc;
 
 impl Image {
-    unsafe fn arrow_data_to_vec<T: arrow::datatypes::ArrowPrimitiveType, G>(
-        array: &arrow::array::UnionArray,
-        lookup_table: &HashMap<String, i8>,
-    ) -> Result<Vec<G>> {
-        let arrow = column_by_name::<arrow::array::PrimitiveArray<T>>(array, "data", lookup_table)?;
-        let ptr = arrow.values().as_ptr();
-        let len = arrow.len();
-
-        Ok(Vec::from_raw_parts(ptr as *mut G, len, len))
-    }
-
     /// Constructs an `Image` from an Arrow `UnionArray`.
     ///
     /// This function takes an Arrow `UnionArray` and extracts the necessary fields to construct
@@ -49,61 +38,70 @@ impl Image {
     /// let image = Image::from_arrow(array).unwrap();
     /// ```
     pub fn from_arrow(array: arrow::array::UnionArray) -> Result<Self> {
-        use arrow::array::Array;
+        let mut map = arrow_union_into_map(array)?;
 
-        let union_fields = match array.data_type() {
-            arrow::datatypes::DataType::Union(fields, ..) => fields,
-            _ => {
-                return Err(Report::msg("UnionArray has invalid data type."));
+        let width =
+            get_primitive_array_from_map::<u32, arrow::datatypes::UInt32Type>("width", &mut map)?
+                .first()
+                .cloned()
+                .wrap_err(Report::msg("width field must contains at least 1 value!"))?;
+
+        let height =
+            get_primitive_array_from_map::<u32, arrow::datatypes::UInt32Type>("height", &mut map)?
+                .first()
+                .cloned()
+                .wrap_err(Report::msg("height field must contains at least 1 value!"))?;
+
+        let encoding = Encoding::from_string(
+            get_utf8_array_from_map("encoding", &mut map)?
+                .first()
+                .cloned()
+                .wrap_err(Report::msg(
+                    "encoding field must contains at least 1 value!",
+                ))?,
+        )?;
+
+        let name = get_utf8_array_from_map("name", &mut map)?
+            .first()
+            .cloned()
+            .wrap_err(Report::msg("name field must contains at least 1 value!"))?;
+
+        let name = match name.as_str() {
+            "" => None,
+            _ => Some(name),
+        };
+
+        let data = match encoding {
+            Encoding::RGB8 => {
+                let data = get_primitive_array_from_map::<u8, arrow::datatypes::UInt8Type>(
+                    "data", &mut map,
+                )?;
+
+                DataContainer::from_u8(data)
+            }
+            Encoding::BGR8 => {
+                let data = get_primitive_array_from_map::<u8, arrow::datatypes::UInt8Type>(
+                    "data", &mut map,
+                )?;
+
+                DataContainer::from_u8(data)
+            }
+            Encoding::GRAY8 => {
+                let data = get_primitive_array_from_map::<u8, arrow::datatypes::UInt8Type>(
+                    "data", &mut map,
+                )?;
+
+                DataContainer::from_u8(data)
             }
         };
 
-        let lookup_table = union_lookup_table(union_fields);
-
-        let width =
-            column_by_name::<arrow::array::UInt32Array>(&array, "width", &lookup_table)?.value(0);
-        let height =
-            column_by_name::<arrow::array::UInt32Array>(&array, "height", &lookup_table)?.value(0);
-        let encoding = Encoding::from_string(
-            column_by_name::<arrow::array::StringArray>(&array, "encoding", &lookup_table)?
-                .value(0)
-                .to_string(),
-        )?;
-
-        let name = column_by_name::<arrow::array::StringArray>(&array, "name", &lookup_table)?;
-
-        let name = if name.is_null(0) {
-            None
-        } else {
-            Some(name.value(0).to_string())
-        };
-
-        unsafe {
-            let array = mem::ManuallyDrop::new(array);
-
-            let data = match encoding {
-                Encoding::RGB8 => DataContainer::from_u8(Self::arrow_data_to_vec::<
-                    arrow::datatypes::UInt8Type,
-                    u8,
-                >(&array, &lookup_table)?),
-                Encoding::BGR8 => DataContainer::from_u8(Self::arrow_data_to_vec::<
-                    arrow::datatypes::UInt8Type,
-                    u8,
-                >(&array, &lookup_table)?),
-                Encoding::GRAY8 => DataContainer::from_u8(Self::arrow_data_to_vec::<
-                    arrow::datatypes::UInt8Type,
-                    u8,
-                >(&array, &lookup_table)?),
-            };
-
-            Ok(Image {
-                data,
-                width,
-                height,
-                encoding,
-                name,
-            })
-        }
+        Ok(Image {
+            data,
+            width,
+            height,
+            encoding,
+            name,
+        })
     }
 
     fn convert_image_details_into_arrow(image: Image) -> Result<Vec<Arc<dyn arrow::array::Array>>> {
@@ -160,6 +158,18 @@ impl Image {
     pub fn into_arrow(self) -> Result<arrow::array::UnionArray> {
         let type_ids = [].into_iter().collect::<arrow::buffer::ScalarBuffer<i8>>();
         let offsets = [].into_iter().collect::<arrow::buffer::ScalarBuffer<i32>>();
+
+        fn union_field(
+            index: i8,
+            name: &str,
+            data_type: arrow::datatypes::DataType,
+            nullable: bool,
+        ) -> (i8, Arc<arrow::datatypes::Field>) {
+            (
+                index,
+                Arc::new(arrow::datatypes::Field::new(name, data_type, nullable)),
+            )
+        }
 
         let datatype = match self.encoding {
             Encoding::RGB8 => arrow::datatypes::DataType::UInt8,

@@ -5,7 +5,7 @@ use fastformat::image::Image;
 fn camera_read() -> ndarray::Array<u8, ndarray::Ix3> {
     // Dummy camera read
 
-    let flat_image = vec![0; 27];
+    let flat_image = (110..137).collect::<Vec<u8>>();
     println!(
         "Generate a camera image at address: {:?}",
         flat_image.as_ptr()
@@ -16,10 +16,10 @@ fn camera_read() -> ndarray::Array<u8, ndarray::Ix3> {
     return image.bgr8_into_ndarray().unwrap();
 }
 
-fn image_show(_frame: ndarray::ArrayView<u8, ndarray::Ix3>) {
+fn image_show(frame: ndarray::ArrayView<u8, ndarray::Ix3>) {
     // Dummy image show
 
-    println!("Showing an image.");
+    println!("{:?}", frame);
 }
 
 fn send_output(arrow_array: arrow::array::UnionArray) {
