@@ -1,5 +1,5 @@
 use super::{
-    encoding::Encoding, BBox, BboxNdArrayResult, BboxNdArrayViewMutResult, BboxNdArrayViewResult,
+    encoding::Encoding, BBox, BBoxNDArrayResult, BBoxNDArrayViewMutResult, BBoxNDArrayViewResult,
 };
 use eyre::{Context, Report, Result};
 
@@ -31,7 +31,7 @@ impl BBox {
         )
     }
 
-    pub fn xyxy_into_ndarray(self) -> Result<BboxNdArrayResult> {
+    pub fn xyxy_into_ndarray(self) -> Result<BBoxNDArrayResult> {
         match self.encoding {
             Encoding::XYXY => Ok((
                 ndarray::Array::from_vec(self.data),
@@ -42,7 +42,7 @@ impl BBox {
         }
     }
 
-    pub fn xyxy_into_ndarray_view(&self) -> Result<BboxNdArrayViewResult> {
+    pub fn xyxy_into_ndarray_view(&self) -> Result<BBoxNDArrayViewResult> {
         match self.encoding {
             Encoding::XYXY => {
                 let data = ndarray::ArrayView::from_shape(self.data.len(), &self.data)
@@ -59,7 +59,7 @@ impl BBox {
         }
     }
 
-    pub fn xyxy_into_ndarray_view_mut(&mut self) -> Result<BboxNdArrayViewMutResult> {
+    pub fn xyxy_into_ndarray_view_mut(&mut self) -> Result<BBoxNDArrayViewMutResult> {
         match self.encoding {
             Encoding::XYXY => {
                 let data = ndarray::ArrayViewMut::from_shape(self.data.len(), &mut self.data)
