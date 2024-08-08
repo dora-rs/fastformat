@@ -1,4 +1,6 @@
-use super::{encoding::Encoding, BBox};
+use super::{
+    encoding::Encoding, BBox, BboxNdArrayResult, BboxNdArrayViewMutResult, BboxNdArrayViewResult,
+};
 use eyre::{Context, Report, Result};
 
 impl BBox {
@@ -29,13 +31,7 @@ impl BBox {
         )
     }
 
-    pub fn xyxy_into_ndarray(
-        self,
-    ) -> Result<(
-        ndarray::Array<f32, ndarray::Ix1>,
-        ndarray::Array<f32, ndarray::Ix1>,
-        ndarray::Array<String, ndarray::Ix1>,
-    )> {
+    pub fn xyxy_into_ndarray(self) -> Result<BboxNdArrayResult> {
         match self.encoding {
             Encoding::XYXY => Ok((
                 ndarray::Array::from_vec(self.data),
@@ -46,13 +42,7 @@ impl BBox {
         }
     }
 
-    pub fn xyxy_into_ndarray_view(
-        &self,
-    ) -> Result<(
-        ndarray::ArrayView<f32, ndarray::Ix1>,
-        ndarray::ArrayView<f32, ndarray::Ix1>,
-        ndarray::ArrayView<String, ndarray::Ix1>,
-    )> {
+    pub fn xyxy_into_ndarray_view(&self) -> Result<BboxNdArrayViewResult> {
         match self.encoding {
             Encoding::XYXY => {
                 let data = ndarray::ArrayView::from_shape(self.data.len(), &self.data)
@@ -69,13 +59,7 @@ impl BBox {
         }
     }
 
-    pub fn xyxy_into_ndarray_view_mut(
-        &mut self,
-    ) -> Result<(
-        ndarray::ArrayViewMut<f32, ndarray::Ix1>,
-        ndarray::ArrayViewMut<f32, ndarray::Ix1>,
-        ndarray::ArrayViewMut<String, ndarray::Ix1>,
-    )> {
+    pub fn xyxy_into_ndarray_view_mut(&mut self) -> Result<BboxNdArrayViewMutResult> {
         match self.encoding {
             Encoding::XYXY => {
                 let data = ndarray::ArrayViewMut::from_shape(self.data.len(), &mut self.data)

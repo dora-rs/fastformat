@@ -16,6 +16,24 @@ pub struct BBox {
     pub encoding: Encoding,
 }
 
+type BboxNdArrayResult = (
+    ndarray::Array<f32, ndarray::Ix1>,
+    ndarray::Array<f32, ndarray::Ix1>,
+    ndarray::Array<String, ndarray::Ix1>,
+);
+
+type BboxNdArrayViewResult<'a> = (
+    ndarray::ArrayView<'a, f32, ndarray::Ix1>,
+    ndarray::ArrayView<'a, f32, ndarray::Ix1>,
+    ndarray::ArrayView<'a, String, ndarray::Ix1>,
+);
+
+type BboxNdArrayViewMutResult<'a> = (
+    ndarray::ArrayViewMut<'a, f32, ndarray::Ix1>,
+    ndarray::ArrayViewMut<'a, f32, ndarray::Ix1>,
+    ndarray::ArrayViewMut<'a, String, ndarray::Ix1>,
+);
+
 impl BBox {
     pub fn into_xyxy(self) -> Result<Self> {
         match self.encoding {
