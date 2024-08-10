@@ -2,6 +2,7 @@ use eyre::{Report, Result};
 
 use std::fmt::Display;
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Clone, Copy)]
 pub enum Encoding {
     XYXY,

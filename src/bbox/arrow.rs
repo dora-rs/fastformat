@@ -1,24 +1,11 @@
-use crate::arrow::{column_by_name, union_field, union_lookup_table};
+use crate::arrow::{arrow_union_into_map, get_primitive_array_from_map, get_utf8_array_from_map};
 
 use super::{encoding::Encoding, BBox};
-use eyre::{Context, Report, Result};
+use eyre::{Context, ContextCompat, Report, Result};
 
-use std::{collections::HashMap, mem, sync::Arc};
+use std::sync::Arc;
 
 impl BBox {
-    unsafe fn arrow_to_vec<T: arrow::datatypes::ArrowPrimitiveType, G>(
-        field: &str,
-        array: &arrow::array::UnionArray,
-        lookup_table: &HashMap<String, i8>,
-    ) -> Result<Vec<G>> {
-        let arrow = column_by_name::<arrow::array::PrimitiveArray<T>>(array, field, lookup_table)?;
-
-        let ptr = arrow.values().as_ptr();
-        let len = arrow.len();
-
-        Ok(Vec::from_raw_parts(ptr as *mut G, len, len))
-    }
-
     fn convert_bbox_details_into_arrow(bbox: BBox) -> Result<Vec<Arc<dyn arrow::array::Array>>> {
         let data = Arc::new(arrow::array::Float32Array::from(bbox.data));
         let confidence = Arc::new(arrow::array::Float32Array::from(bbox.confidence));
@@ -32,9 +19,48 @@ impl BBox {
         Ok(vec![data, confidence, label, encoding])
     }
 
+    /// Converts a `BBox` instance into an Arrow `UnionArray`.
+    ///
+    /// This function takes a `BBox` and converts it into an Arrow `UnionArray`, which contains
+    /// the fields `data`, `confidence`, `label`, and `encoding` as different children arrays
+    /// within the union.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the constructed `arrow::array::UnionArray` if successful, or an error otherwise.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the `UnionArray` construction fails due to any issue with the `BBox` fields
+    /// or the conversion process.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use fastformat::bbox::BBox;
+    ///
+    /// let flat_bbox = vec![1.0, 1.0, 2.0, 2.0];
+    /// let confidence = vec![0.98];
+    /// let label = vec!["cat".to_string()];
+    /// let xyxy_bbox = BBox::new_xyxy(flat_bbox, confidence, label).unwrap();
+    ///
+    /// let arrow_union = xyxy_bbox.into_arrow().unwrap();
+    /// ```
     pub fn into_arrow(self) -> Result<arrow::array::UnionArray> {
         let type_ids = [].into_iter().collect::<arrow::buffer::ScalarBuffer<i8>>();
         let offsets = [].into_iter().collect::<arrow::buffer::ScalarBuffer<i32>>();
+
+        fn union_field(
+            index: i8,
+            name: &str,
+            data_type: arrow::datatypes::DataType,
+            nullable: bool,
+        ) -> (i8, Arc<arrow::datatypes::Field>) {
+            (
+                index,
+                Arc::new(arrow::datatypes::Field::new(name, data_type, nullable)),
+            )
+        }
 
         let union_fields = [
             union_field(0, "data", arrow::datatypes::DataType::Float32, false),
@@ -51,54 +77,62 @@ impl BBox {
             .wrap_err("Failed to create UnionArray with BBox data.")
     }
 
+    /// Creates a `BBox` instance from an Arrow `UnionArray`.
+    ///
+    /// This function takes an Arrow `UnionArray`, extracts the `BBox` fields (`data`, `confidence`,
+    /// `label`, and `encoding`), and uses them to create a new `BBox` instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `array` - An `arrow::array::UnionArray` containing the `BBox` data.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the constructed `BBox` if successful, or an error otherwise.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any field is missing or if there is an issue during the conversion.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use fastformat::bbox::BBox;
+    ///
+    /// let flat_bbox = vec![1.0, 1.0, 2.0, 2.0];
+    /// let confidence = vec![0.98];
+    /// let label = vec!["cat".to_string()];
+    /// let xyxy_bbox = BBox::new_xyxy(flat_bbox, confidence, label).unwrap();
+    ///
+    /// let arrow_union = xyxy_bbox.into_arrow().unwrap();
+    ///
+    /// let new_bbox = BBox::from_arrow(arrow_union).unwrap();
+    /// ```
     pub fn from_arrow(array: arrow::array::UnionArray) -> Result<Self> {
-        use arrow::array::Array;
+        let mut map = arrow_union_into_map(array)?;
 
-        let union_fields = match array.data_type() {
-            arrow::datatypes::DataType::Union(fields, ..) => fields,
-            _ => {
-                return Err(Report::msg("UnionArray has invalid data type."));
-            }
-        };
-
-        let lookup_table = union_lookup_table(union_fields);
-
+        let data =
+            get_primitive_array_from_map::<f32, arrow::datatypes::Float32Type>("data", &mut map)?;
+        let confidence = get_primitive_array_from_map::<f32, arrow::datatypes::Float32Type>(
+            "confidence",
+            &mut map,
+        )?;
+        let label = get_utf8_array_from_map("label", &mut map)?;
         let encoding = Encoding::from_string(
-            column_by_name::<arrow::array::StringArray>(&array, "encoding", &lookup_table)?
-                .value(0)
-                .to_string(),
+            get_utf8_array_from_map("encoding", &mut map)?
+                .first()
+                .cloned()
+                .wrap_err(Report::msg(
+                    "encoding field must contains at least 1 value!",
+                ))?,
         )?;
 
-        unsafe {
-            mem::ManuallyDrop::new(array);
-            let array = mem::ManuallyDrop::new(array);
-
-            let data = Self::arrow_to_vec::<arrow::datatypes::Float32Type, f32>(
-                "data",
-                &array,
-                &lookup_table,
-            )?;
-
-            let confidence = Self::arrow_to_vec::<arrow::datatypes::Float32Type, f32>(
-                "confidence",
-                &array,
-                &lookup_table,
-            )?;
-
-            let arrow =
-                column_by_name::<arrow::array::StringArray>(&array, "label", &lookup_table)?;
-            let ptr = arrow.values().as_ptr();
-            let len = arrow.len();
-
-            let label = Vec::from_raw_parts(ptr as *mut String, len, len);
-
-            Ok(BBox {
-                data,
-                confidence,
-                label,
-                encoding,
-            })
-        }
+        Ok(BBox {
+            data,
+            confidence,
+            label,
+            encoding,
+        })
     }
 }
 
