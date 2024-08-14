@@ -1,7 +1,7 @@
-use super::{container::DataContainer, encoding::Encoding, Image};
+use super::{data::ImageData, encoding::Encoding, Image};
 use eyre::{Context, Report, Result};
 
-impl Image {
+impl Image<'_> {
     /// Creates a new `Image` in BGR8 format.
     ///
     /// This function constructs a new `Image` object with the given pixel data, width, height,
@@ -40,7 +40,7 @@ impl Image {
         }
 
         Ok(Image {
-            data: DataContainer::from_u8(data),
+            data: ImageData::from_vec_u8(data),
             width,
             height,
             encoding: Encoding::BGR8,

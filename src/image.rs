@@ -1,6 +1,6 @@
 use eyre::{Report, Result};
 
-use container::DataContainer;
+use data::ImageData;
 use encoding::Encoding;
 
 mod bgr8;
@@ -8,12 +8,12 @@ mod gray8;
 mod rgb8;
 
 mod arrow;
-mod container;
+mod data;
 mod encoding;
 
 #[derive(Debug)]
-pub struct Image {
-    pub data: DataContainer,
+pub struct Image<'a> {
+    pub data: ImageData<'a>,
 
     pub width: u32,
     pub height: u32,
@@ -23,7 +23,7 @@ pub struct Image {
     pub name: Option<String>,
 }
 
-impl Image {
+impl Image<'_> {
     pub fn as_ptr(&self) -> *const u8 {
         self.data.as_ptr()
     }
@@ -36,9 +36,8 @@ impl Image {
                 for i in (0..data.len()).step_by(3) {
                     data.swap(i, i + 2);
                 }
-
                 Ok(Image {
-                    data: DataContainer::from_u8(data),
+                    data: ImageData::from_vec_u8(data),
                     width: self.width,
                     height: self.height,
                     encoding: Encoding::RGB8,
@@ -60,7 +59,7 @@ impl Image {
                 }
 
                 Ok(Image {
-                    data: DataContainer::from_u8(data),
+                    data: ImageData::from_vec_u8(data),
                     width: self.width,
                     height: self.height,
                     encoding: Encoding::BGR8,

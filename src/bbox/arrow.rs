@@ -1,52 +1,140 @@
-use crate::arrow::{arrow_union_into_map, get_primitive_array_from_map, get_utf8_array_from_map};
-
 use super::{encoding::Encoding, BBox};
+use crate::arrow::{
+    array_data_to_map, primitive_array_from_raw_parts, primitive_array_view_from_raw_parts,
+    primitive_buffer_from_map, primitive_singleton_from_raw_parts, utf8_array_from_raw_parts,
+    utf8_buffer_from_map, utf8_singleton_from_raw_parts,
+};
+
 use eyre::{Context, ContextCompat, Report, Result};
 
-use std::sync::Arc;
+use std::borrow::Cow;
+use std::{collections::HashMap, sync::Arc};
 
-impl BBox {
-    fn convert_bbox_details_into_arrow(bbox: BBox) -> Result<Vec<Arc<dyn arrow::array::Array>>> {
-        let data = Arc::new(arrow::array::Float32Array::from(bbox.data));
-        let confidence = Arc::new(arrow::array::Float32Array::from(bbox.confidence));
-        let label = Arc::new(arrow::array::StringArray::from(bbox.label));
-        let encoding = Arc::new(arrow::array::StringArray::from(vec![
-            bbox.encoding
+impl<'a> BBox<'a> {
+    pub fn raw_parts(
+        array_data: arrow::array::ArrayData,
+    ) -> Result<
+        HashMap<
+            String,
+            (
+                arrow::buffer::Buffer,
+                Option<arrow::buffer::OffsetBuffer<i32>>,
+            ),
+        >,
+    > {
+        let mut map = array_data_to_map(array_data)?;
+
+        let mut result = HashMap::new();
+
+        result.insert(
+            "data".to_string(),
+            primitive_buffer_from_map::<arrow::datatypes::Float32Type>("data", &mut map)?,
+        );
+
+        result.insert(
+            "confidence".to_string(),
+            primitive_buffer_from_map::<arrow::datatypes::Float32Type>("confidence", &mut map)?,
+        );
+
+        result.insert(
+            "label".to_string(),
+            utf8_buffer_from_map("label", &mut map)?,
+        );
+
+        result.insert(
+            "encoding".to_string(),
+            utf8_buffer_from_map("encoding", &mut map)?,
+        );
+
+        Ok(result)
+    }
+
+    pub fn from_raw_parts(
+        mut raw_parts: HashMap<
+            String,
+            (
+                arrow::buffer::Buffer,
+                Option<arrow::buffer::OffsetBuffer<i32>>,
+            ),
+        >,
+    ) -> Result<Self> {
+        let data = primitive_array_from_raw_parts::<arrow::datatypes::Float32Type>(
+            "data",
+            &mut raw_parts,
+        )?;
+
+        let confidence = primitive_array_from_raw_parts::<arrow::datatypes::Float32Type>(
+            "confidence",
+            &mut raw_parts,
+        )?;
+
+        let label = utf8_array_from_raw_parts("label", &mut raw_parts)?;
+
+        let encoding =
+            Encoding::from_string(utf8_singleton_from_raw_parts("encoding", &raw_parts)?)?;
+
+        Ok(Self {
+            data: Cow::from(data),
+            confidence: Cow::from(confidence),
+            label,
+            encoding,
+        })
+    }
+
+    pub fn view_from_raw_parts(
+        raw_parts: &'a mut HashMap<
+            String,
+            (
+                arrow::buffer::Buffer,
+                Option<arrow::buffer::OffsetBuffer<i32>>,
+            ),
+        >,
+    ) -> Result<Self> {
+        let label = utf8_array_from_raw_parts("label", raw_parts)?;
+
+        let data = primitive_array_view_from_raw_parts::<arrow::datatypes::Float32Type>(
+            "data", raw_parts,
+        )?;
+
+        let confidence = primitive_array_view_from_raw_parts::<arrow::datatypes::Float32Type>(
+            "confidence",
+            raw_parts,
+        )?;
+
+        let encoding =
+            Encoding::from_string(utf8_singleton_from_raw_parts("encoding", raw_parts)?)?;
+
+        Ok(Self {
+            data: Cow::from(data),
+            confidence: Cow::from(confidence),
+            label,
+            encoding,
+        })
+    }
+
+    pub fn from_arrow(array_data: arrow::array::ArrayData) -> Result<Self> {
+        Self::from_raw_parts(Self::raw_parts(array_data)?)
+    }
+
+    pub fn into_arrow(self) -> Result<arrow::array::ArrayData> {
+        use arrow::array::Array;
+
+        let data: arrow::array::ArrayRef =
+            Arc::new(arrow::array::Float32Array::from(self.data.into_owned()));
+
+        let confidence: arrow::array::ArrayRef = Arc::new(arrow::array::Float32Array::from(
+            self.confidence.into_owned(),
+        ));
+
+        let label: arrow::array::ArrayRef = Arc::new(arrow::array::StringArray::from(self.label));
+        let encoding: arrow::array::ArrayRef = Arc::new(arrow::array::StringArray::from(vec![
+            self.encoding
                 .to_string();
             1
         ]));
 
-        Ok(vec![data, confidence, label, encoding])
-    }
+        let children = vec![data, confidence, label, encoding];
 
-    /// Converts a `BBox` instance into an Arrow `UnionArray`.
-    ///
-    /// This function takes a `BBox` and converts it into an Arrow `UnionArray`, which contains
-    /// the fields `data`, `confidence`, `label`, and `encoding` as different children arrays
-    /// within the union.
-    ///
-    /// # Returns
-    ///
-    /// A `Result` containing the constructed `arrow::array::UnionArray` if successful, or an error otherwise.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the `UnionArray` construction fails due to any issue with the `BBox` fields
-    /// or the conversion process.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use fastformat::bbox::BBox;
-    ///
-    /// let flat_bbox = vec![1.0, 1.0, 2.0, 2.0];
-    /// let confidence = vec![0.98];
-    /// let label = vec!["cat".to_string()];
-    /// let xyxy_bbox = BBox::new_xyxy(flat_bbox, confidence, label).unwrap();
-    ///
-    /// let arrow_union = xyxy_bbox.into_arrow().unwrap();
-    /// ```
-    pub fn into_arrow(self) -> Result<arrow::array::UnionArray> {
         let type_ids = [].into_iter().collect::<arrow::buffer::ScalarBuffer<i8>>();
         let offsets = [].into_iter().collect::<arrow::buffer::ScalarBuffer<i32>>();
 
@@ -62,7 +150,7 @@ impl BBox {
             )
         }
 
-        let union_fields = [
+        let union_fields = vec![
             union_field(0, "data", arrow::datatypes::DataType::Float32, false),
             union_field(1, "confidence", arrow::datatypes::DataType::Float32, false),
             union_field(2, "label", arrow::datatypes::DataType::Utf8, false),
@@ -71,68 +159,11 @@ impl BBox {
         .into_iter()
         .collect::<arrow::datatypes::UnionFields>();
 
-        let children = Self::convert_bbox_details_into_arrow(self)?;
-
-        arrow::array::UnionArray::try_new(union_fields, type_ids, Some(offsets), children)
-            .wrap_err("Failed to create UnionArray with BBox data.")
-    }
-
-    /// Creates a `BBox` instance from an Arrow `UnionArray`.
-    ///
-    /// This function takes an Arrow `UnionArray`, extracts the `BBox` fields (`data`, `confidence`,
-    /// `label`, and `encoding`), and uses them to create a new `BBox` instance.
-    ///
-    /// # Arguments
-    ///
-    /// * `array` - An `arrow::array::UnionArray` containing the `BBox` data.
-    ///
-    /// # Returns
-    ///
-    /// A `Result` containing the constructed `BBox` if successful, or an error otherwise.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if any field is missing or if there is an issue during the conversion.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use fastformat::bbox::BBox;
-    ///
-    /// let flat_bbox = vec![1.0, 1.0, 2.0, 2.0];
-    /// let confidence = vec![0.98];
-    /// let label = vec!["cat".to_string()];
-    /// let xyxy_bbox = BBox::new_xyxy(flat_bbox, confidence, label).unwrap();
-    ///
-    /// let arrow_union = xyxy_bbox.into_arrow().unwrap();
-    ///
-    /// let new_bbox = BBox::from_arrow(arrow_union).unwrap();
-    /// ```
-    pub fn from_arrow(array: arrow::array::UnionArray) -> Result<Self> {
-        let mut map = arrow_union_into_map(array)?;
-
-        let data =
-            get_primitive_array_from_map::<f32, arrow::datatypes::Float32Type>("data", &mut map)?;
-        let confidence = get_primitive_array_from_map::<f32, arrow::datatypes::Float32Type>(
-            "confidence",
-            &mut map,
-        )?;
-        let label = get_utf8_array_from_map("label", &mut map)?;
-        let encoding = Encoding::from_string(
-            get_utf8_array_from_map("encoding", &mut map)?
-                .first()
-                .cloned()
-                .wrap_err(Report::msg(
-                    "encoding field must contains at least 1 value!",
-                ))?,
-        )?;
-
-        Ok(BBox {
-            data,
-            confidence,
-            label,
-            encoding,
-        })
+        Ok(
+            arrow::array::UnionArray::try_new(union_fields, type_ids, Some(offsets), children)
+                .wrap_err("Failed to create UnionArray with Image data.")?
+                .into_data(),
+        )
     }
 }
 

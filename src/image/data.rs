@@ -1,0 +1,109 @@
+use eyre::Result;
+
+use std::borrow::Cow;
+
+#[derive(Debug)]
+pub enum ImageData<'a> {
+    U8Data(Cow<'a, [u8]>),
+    U16Data(Cow<'a, [u16]>),
+    F32Data(Cow<'a, [f32]>),
+}
+
+impl ImageData<'_> {
+    pub fn as_ptr(&self) -> *const u8 {
+        match self {
+            Self::U8Data(data) => data.as_ptr() as *const u8,
+            Self::U16Data(data) => data.as_ptr() as *const u8,
+            Self::F32Data(data) => data.as_ptr() as *const u8,
+        }
+    }
+
+    pub fn into_u8(self) -> Result<Vec<u8>> {
+        match self {
+            Self::U8Data(data) => Ok(data.into_owned()),
+            _ => Err(eyre::Report::msg("Can't convert data to u8")),
+        }
+    }
+
+    pub fn into_u16(self) -> Result<Vec<u16>> {
+        match self {
+            Self::U16Data(data) => Ok(data.into_owned()),
+            _ => Err(eyre::Report::msg("Can't convert data to u16")),
+        }
+    }
+
+    pub fn into_f32(self) -> Result<Vec<f32>> {
+        match self {
+            Self::F32Data(data) => Ok(data.into_owned()),
+            _ => Err(eyre::Report::msg("Can't convert data to f32")),
+        }
+    }
+
+    pub fn as_u8(&self) -> Result<&[u8]> {
+        match self {
+            Self::U8Data(data) => Ok(data),
+            _ => Err(eyre::Report::msg("Can't convert data to u8")),
+        }
+    }
+
+    pub fn as_u16(&self) -> Result<&[u16]> {
+        match self {
+            Self::U16Data(data) => Ok(data),
+            _ => Err(eyre::Report::msg("Can't convert data to u16")),
+        }
+    }
+
+    pub fn as_f32(&self) -> Result<&[f32]> {
+        match self {
+            Self::F32Data(data) => Ok(data),
+            _ => Err(eyre::Report::msg("Can't convert data to f32")),
+        }
+    }
+
+    pub fn as_mut_u8(&mut self) -> Result<&mut Vec<u8>> {
+        match self {
+            Self::U8Data(data) => Ok(data.to_mut()),
+            _ => Err(eyre::Report::msg("Can't convert data to u8")),
+        }
+    }
+
+    pub fn as_mut_u16(&mut self) -> Result<&mut Vec<u16>> {
+        match self {
+            Self::U16Data(data) => Ok(data.to_mut()),
+            _ => Err(eyre::Report::msg("Can't convert data to 16")),
+        }
+    }
+
+    pub fn as_mut_f32(&mut self) -> Result<&mut Vec<f32>> {
+        match self {
+            Self::F32Data(data) => Ok(data.to_mut()),
+            _ => Err(eyre::Report::msg("Can't convert data to f32")),
+        }
+    }
+
+    pub fn from_vec_u8(data: Vec<u8>) -> Self {
+        Self::U8Data(Cow::from(data))
+    }
+
+    pub fn from_vec_u16(data: Vec<u16>) -> Self {
+        Self::U16Data(Cow::from(data))
+    }
+
+    pub fn from_vec_f32(data: Vec<f32>) -> Self {
+        Self::F32Data(Cow::from(data))
+    }
+}
+
+impl<'a> ImageData<'a> {
+    pub fn from_slice_u8(data: &'a [u8]) -> Self {
+        Self::U8Data(Cow::from(data))
+    }
+
+    pub fn from_slice_u16(data: &'a [u16]) -> Self {
+        Self::U16Data(Cow::from(data))
+    }
+
+    pub fn from_slice_f32(data: &'a [f32]) -> Self {
+        Self::F32Data(Cow::from(data))
+    }
+}

@@ -2,6 +2,8 @@ use eyre::{ContextCompat, Result};
 
 use encoding::Encoding;
 
+use std::borrow::Cow;
+
 mod xywh;
 mod xyxy;
 
@@ -9,9 +11,9 @@ mod arrow;
 
 mod encoding;
 
-pub struct BBox {
-    pub data: Vec<f32>,
-    pub confidence: Vec<f32>,
+pub struct BBox<'a> {
+    pub data: Cow<'a, [f32]>,
+    pub confidence: Cow<'a, [f32]>,
     pub label: Vec<String>,
     pub encoding: Encoding,
 }
@@ -34,32 +36,35 @@ type BBoxArrayViewMutResult<'a> = (
     ndarray::ArrayViewMut<'a, String, ndarray::Ix1>,
 );
 
-impl BBox {
+impl BBox<'_> {
     pub fn into_xyxy(self) -> Result<Self> {
         match self.encoding {
             Encoding::XYWH => {
                 let mut data = self.data;
+                {
+                    let data = data.to_mut();
 
-                for i in 0..self.confidence.len() {
-                    let x = data
-                        .get(i * 4)
-                        .wrap_err("Not enough data matching 4 values per box!")
-                        .cloned()?;
-                    let y = data
-                        .get(i * 4 + 1)
-                        .wrap_err("Not enough data matching 4 values per box!")
-                        .cloned()?;
-                    let w = data
-                        .get(i * 4 + 2)
-                        .wrap_err("Not enough data matching 4 values per box!")
-                        .cloned()?;
-                    let h = data
-                        .get(i * 4 + 3)
-                        .wrap_err("Not enough data matching 4 values per box!")
-                        .cloned()?;
+                    for i in 0..self.confidence.len() {
+                        let x = data
+                            .get(i * 4)
+                            .wrap_err("Not enough data matching 4 values per box!")
+                            .cloned()?;
+                        let y = data
+                            .get(i * 4 + 1)
+                            .wrap_err("Not enough data matching 4 values per box!")
+                            .cloned()?;
+                        let w = data
+                            .get(i * 4 + 2)
+                            .wrap_err("Not enough data matching 4 values per box!")
+                            .cloned()?;
+                        let h = data
+                            .get(i * 4 + 3)
+                            .wrap_err("Not enough data matching 4 values per box!")
+                            .cloned()?;
 
-                    data[i * 4 + 2] = x + w;
-                    data[i * 4 + 3] = y + h;
+                        data[i * 4 + 2] = x + w;
+                        data[i * 4 + 3] = y + h;
+                    }
                 }
 
                 Ok(Self {
@@ -77,27 +82,30 @@ impl BBox {
         match self.encoding {
             Encoding::XYXY => {
                 let mut data = self.data;
+                {
+                    let data = data.to_mut();
 
-                for i in 0..self.confidence.len() {
-                    let x1 = data
-                        .get(i * 4)
-                        .wrap_err("Not enough data matching 4 values per box!")
-                        .cloned()?;
-                    let y1 = data
-                        .get(i * 4 + 1)
-                        .wrap_err("Not enough data matching 4 values per box!")
-                        .cloned()?;
-                    let x2 = data
-                        .get(i * 4 + 2)
-                        .wrap_err("Not enough data matching 4 values per box!")
-                        .cloned()?;
-                    let y2 = data
-                        .get(i * 4 + 3)
-                        .wrap_err("Not enough data matching 4 values per box!")
-                        .cloned()?;
+                    for i in 0..self.confidence.len() {
+                        let x1 = data
+                            .get(i * 4)
+                            .wrap_err("Not enough data matching 4 values per box!")
+                            .cloned()?;
+                        let y1 = data
+                            .get(i * 4 + 1)
+                            .wrap_err("Not enough data matching 4 values per box!")
+                            .cloned()?;
+                        let x2 = data
+                            .get(i * 4 + 2)
+                            .wrap_err("Not enough data matching 4 values per box!")
+                            .cloned()?;
+                        let y2 = data
+                            .get(i * 4 + 3)
+                            .wrap_err("Not enough data matching 4 values per box!")
+                            .cloned()?;
 
-                    data[i * 4 + 2] = x2 - x1;
-                    data[i * 4 + 3] = y2 - y1;
+                        data[i * 4 + 2] = x2 - x1;
+                        data[i * 4 + 3] = y2 - y1;
+                    }
                 }
 
                 Ok(Self {
@@ -127,7 +135,7 @@ mod tests {
 
         let expected_bbox = vec![1.0, 1.0, 1.0, 1.0];
 
-        assert_eq!(expected_bbox, final_bbox_data);
+        assert_eq!(expected_bbox, final_bbox_data.into_owned());
     }
 
     #[test]
@@ -144,6 +152,6 @@ mod tests {
 
         let expected_bbox = vec![1.0, 1.0, 2.0, 2.0];
 
-        assert_eq!(expected_bbox, final_bbox_data);
+        assert_eq!(expected_bbox, final_bbox_data.into_owned());
     }
 }

@@ -1,9 +1,11 @@
+use std::borrow::Cow;
+
 use super::{
     encoding::Encoding, BBox, BBoxArrayResult, BBoxArrayViewMutResult, BBoxArrayViewResult,
 };
 use eyre::{Context, Report, Result};
 
-impl BBox {
+impl BBox<'_> {
     pub fn new_xyxy(data: Vec<f32>, confidence: Vec<f32>, label: Vec<String>) -> Result<Self> {
         if confidence.len() != label.len() || confidence.len() * 4 != data.len() {
             return Err(Report::msg(
@@ -12,8 +14,8 @@ impl BBox {
         }
 
         Ok(BBox {
-            data,
-            confidence,
+            data: Cow::from(data),
+            confidence: Cow::from(confidence),
             label,
             encoding: Encoding::XYXY,
         })
@@ -34,8 +36,8 @@ impl BBox {
     pub fn xyxy_into_ndarray(self) -> Result<BBoxArrayResult> {
         match self.encoding {
             Encoding::XYXY => Ok((
-                ndarray::Array::from_vec(self.data),
-                ndarray::Array::from_vec(self.confidence),
+                ndarray::Array::from_vec(self.data.into_owned()),
+                ndarray::Array::from_vec(self.confidence.into_owned()),
                 ndarray::Array::from_vec(self.label),
             )),
             _ => Err(Report::msg("BBox is not in XYXY format")),
@@ -62,11 +64,13 @@ impl BBox {
     pub fn xyxy_into_ndarray_view_mut(&mut self) -> Result<BBoxArrayViewMutResult> {
         match self.encoding {
             Encoding::XYXY => {
-                let data = ndarray::ArrayViewMut::from_shape(self.data.len(), &mut self.data)
+                let data = ndarray::ArrayViewMut::from_shape(self.data.len(), self.data.to_mut())
                     .wrap_err("Failed to reshape data into ndarray")?;
-                let confidence =
-                    ndarray::ArrayViewMut::from_shape(self.confidence.len(), &mut self.confidence)
-                        .wrap_err("Failed to reshape data into ndarray")?;
+                let confidence = ndarray::ArrayViewMut::from_shape(
+                    self.confidence.len(),
+                    self.confidence.to_mut(),
+                )
+                .wrap_err("Failed to reshape data into ndarray")?;
                 let label = ndarray::ArrayViewMut::from_shape(self.label.len(), &mut self.label)
                     .wrap_err("Failed to reshape data into ndarray")?;
 

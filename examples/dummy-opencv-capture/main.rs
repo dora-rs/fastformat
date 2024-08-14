@@ -22,7 +22,7 @@ fn image_show(frame: ndarray::ArrayView<u8, ndarray::Ix3>) {
     println!("{:?}", frame);
 }
 
-fn send_output(arrow_array: arrow::array::UnionArray) {
+fn send_output(arrow_array: arrow::array::ArrayData) {
     // Dummy send output
 
     let image = Image::from_arrow(arrow_array).unwrap();
