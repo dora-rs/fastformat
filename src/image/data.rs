@@ -10,11 +10,11 @@ pub enum ImageData<'a> {
 }
 
 impl ImageData<'_> {
-    pub fn as_ptr(&self) -> *const u8 {
+    pub fn as_ptr(&self) -> *const u64 {
         match self {
-            Self::U8Data(data) => data.as_ptr() as *const u8,
-            Self::U16Data(data) => data.as_ptr() as *const u8,
-            Self::F32Data(data) => data.as_ptr() as *const u8,
+            Self::U8Data(data) => data.as_ptr() as *const u64,
+            Self::U16Data(data) => data.as_ptr() as *const u64,
+            Self::F32Data(data) => data.as_ptr() as *const u64,
         }
     }
 
@@ -95,6 +95,10 @@ impl ImageData<'_> {
 }
 
 impl<'a> ImageData<'a> {
+    pub fn from_u8(data: Cow<'a, [u8]>) -> Self {
+        Self::U8Data(data)
+    }
+
     pub fn from_slice_u8(data: &'a [u8]) -> Self {
         Self::U8Data(Cow::from(data))
     }

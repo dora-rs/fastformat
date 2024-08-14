@@ -29,7 +29,7 @@ fn send_output(arrow_array: arrow::array::ArrayData) {
 
     println!(
         "Sending an image to dataflow. Image address is: {:?}",
-        image.as_ptr()
+        image.data.as_ptr()
     );
 }
 

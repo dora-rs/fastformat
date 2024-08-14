@@ -24,10 +24,6 @@ pub struct Image<'a> {
 }
 
 impl Image<'_> {
-    pub fn as_ptr(&self) -> *const u8 {
-        self.data.as_ptr()
-    }
-
     pub fn into_rgb8(self) -> Result<Self> {
         match self.encoding {
             Encoding::BGR8 => {
