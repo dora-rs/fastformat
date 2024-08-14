@@ -1,102 +1,45 @@
-use crate::arrow::{arrow_union_into_map, get_primitive_array_from_map, get_utf8_array_from_map};
+use super::{data::ImageData, encoding::Encoding, Image};
 
-use super::{container::DataContainer, encoding::Encoding, Image};
-use eyre::{Context, ContextCompat, Report, Result};
+use eyre::Result;
 
-use std::sync::Arc;
+use crate::arrow::{FastFormatArrowBuilder, FastFormatArrowRawData};
 
-impl Image {
-    /// Constructs an `Image` from an Arrow `UnionArray`.
-    ///
-    /// This function takes an Arrow `UnionArray` and extracts the necessary fields to construct
-    /// an `Image` object. It validates the data type of the `UnionArray`, builds a lookup table for
-    /// the fields, retrieves the image properties (width, height, encoding, name), and decodes the
-    /// pixel data based on the encoding.
-    ///
-    /// # Arguments
-    ///
-    /// * `array` - A reference to an `arrow::array::UnionArray` that contains the image data.
-    ///
-    /// # Returns
-    ///
-    /// A `Result` containing the constructed `Image` if successful, or an error otherwise.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the `UnionArray` has an invalid data type, if required fields are missing,
-    /// or if the pixel data cannot be downcasted to the expected type based on the encoding.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use fastformat::image::Image;
-    ///
-    /// let data = vec![0; 27]; // 3x3 image with 3 bytes per pixel
-    /// let image = Image::new_bgr8(data, 3, 3, None).unwrap();
-    /// let array = image.into_arrow().unwrap();
-    ///
-    /// let image = Image::from_arrow(array).unwrap();
-    /// ```
-    pub fn from_arrow(array: arrow::array::UnionArray) -> Result<Self> {
-        let mut map = arrow_union_into_map(array)?;
+impl<'a> Image<'a> {
+    pub fn raw_data(array_data: arrow::array::ArrayData) -> Result<FastFormatArrowRawData> {
+        use arrow::datatypes::{UInt32Type, UInt8Type};
 
-        let width =
-            get_primitive_array_from_map::<u32, arrow::datatypes::UInt32Type>("width", &mut map)?
-                .first()
-                .cloned()
-                .wrap_err(Report::msg("width field must contains at least 1 value!"))?;
+        let raw_data = FastFormatArrowRawData::new(array_data)?
+            .load_primitive::<UInt32Type>("width")?
+            .load_primitive::<UInt32Type>("height")?
+            .load_utf("encoding")?
+            .load_utf("name")?;
 
-        let height =
-            get_primitive_array_from_map::<u32, arrow::datatypes::UInt32Type>("height", &mut map)?
-                .first()
-                .cloned()
-                .wrap_err(Report::msg("height field must contains at least 1 value!"))?;
-
-        let encoding = Encoding::from_string(
-            get_utf8_array_from_map("encoding", &mut map)?
-                .first()
-                .cloned()
-                .wrap_err(Report::msg(
-                    "encoding field must contains at least 1 value!",
-                ))?,
-        )?;
-
-        let name = get_utf8_array_from_map("name", &mut map)?
-            .first()
-            .cloned()
-            .wrap_err(Report::msg("name field must contains at least 1 value!"))?;
-
-        let name = match name.as_str() {
-            "" => None,
-            _ => Some(name),
+        let encoding = Encoding::from_string(raw_data.utf8_singleton("encoding")?)?;
+        let raw_data = match encoding {
+            Encoding::RGB8 => raw_data.load_primitive::<UInt8Type>("data")?,
+            Encoding::BGR8 => raw_data.load_primitive::<UInt8Type>("data")?,
+            Encoding::GRAY8 => raw_data.load_primitive::<UInt8Type>("data")?,
         };
+
+        Ok(raw_data)
+    }
+
+    pub fn from_raw_data(mut raw_data: FastFormatArrowRawData) -> Result<Self> {
+        use arrow::datatypes::{UInt32Type, UInt8Type};
+
+        let width = raw_data.primitive_singleton::<UInt32Type>("width")?;
+        let height = raw_data.primitive_singleton::<UInt32Type>("height")?;
+        let encoding = Encoding::from_string(raw_data.utf8_singleton("encoding")?)?;
+        let name = Some(raw_data.utf8_singleton("name")?).filter(|s| !s.is_empty());
 
         let data = match encoding {
-            Encoding::RGB8 => {
-                let data = get_primitive_array_from_map::<u8, arrow::datatypes::UInt8Type>(
-                    "data", &mut map,
-                )?;
-
-                DataContainer::from_u8(data)
-            }
-            Encoding::BGR8 => {
-                let data = get_primitive_array_from_map::<u8, arrow::datatypes::UInt8Type>(
-                    "data", &mut map,
-                )?;
-
-                DataContainer::from_u8(data)
-            }
-            Encoding::GRAY8 => {
-                let data = get_primitive_array_from_map::<u8, arrow::datatypes::UInt8Type>(
-                    "data", &mut map,
-                )?;
-
-                DataContainer::from_u8(data)
-            }
+            Encoding::RGB8 => raw_data.primitive_array::<UInt8Type>("data")?,
+            Encoding::BGR8 => raw_data.primitive_array::<UInt8Type>("data")?,
+            Encoding::GRAY8 => raw_data.primitive_array::<UInt8Type>("data")?,
         };
 
-        Ok(Image {
-            data,
+        Ok(Self {
+            data: ImageData::from_vec_u8(data),
             width,
             height,
             encoding,
@@ -104,93 +47,72 @@ impl Image {
         })
     }
 
-    fn convert_image_details_into_arrow(image: Image) -> Result<Vec<Arc<dyn arrow::array::Array>>> {
-        let width = Arc::new(arrow::array::UInt32Array::from(vec![image.width; 1]));
-        let height = Arc::new(arrow::array::UInt32Array::from(vec![image.height; 1]));
+    pub fn view_from_raw_data(raw_data: &'a FastFormatArrowRawData) -> Result<Self> {
+        use arrow::datatypes::{UInt32Type, UInt8Type};
 
-        let encoding = Arc::new(arrow::array::StringArray::from(vec![
-            image
-                .encoding
-                .to_string();
-            1
-        ]));
+        let width = raw_data.primitive_singleton::<UInt32Type>("width")?;
+        let height = raw_data.primitive_singleton::<UInt32Type>("height")?;
+        let encoding = Encoding::from_string(raw_data.utf8_singleton("encoding")?)?;
+        let name = Some(raw_data.utf8_singleton("name")?).filter(|s| !s.is_empty());
 
-        let name = Arc::new(arrow::array::StringArray::from(vec![image.name.clone(); 1]));
-
-        let data: Arc<dyn arrow::array::Array> = match image.encoding {
-            Encoding::RGB8 => Arc::new(arrow::array::UInt8Array::from(image.data.into_u8()?)),
-            Encoding::BGR8 => Arc::new(arrow::array::UInt8Array::from(image.data.into_u8()?)),
-            Encoding::GRAY8 => Arc::new(arrow::array::UInt8Array::from(image.data.into_u8()?)),
+        let data = match encoding {
+            Encoding::RGB8 => raw_data.primitive_array_view::<UInt8Type>("data")?,
+            Encoding::BGR8 => raw_data.primitive_array_view::<UInt8Type>("data")?,
+            Encoding::GRAY8 => raw_data.primitive_array_view::<UInt8Type>("data")?,
         };
 
-        Ok(vec![data, width, height, encoding, name])
+        Ok(Self {
+            data: ImageData::from_slice_u8(data),
+            width,
+            height,
+            encoding,
+            name,
+        })
     }
 
-    /// Converts an `Image` into an Arrow `UnionArray`.
-    ///
-    /// This function takes an `Image` object and converts it into an Arrow `UnionArray`
-    /// that contains the image properties and pixel data. The conversion handles different
-    /// image encodings (BGR8, RGB8, GRAY8) and ensures that the resulting `UnionArray`
-    /// contains all necessary fields.
-    ///
-    /// # Arguments
-    ///
-    /// * `self` - The `Image` object to be converted.
-    ///
-    /// # Returns
-    ///
-    /// A `Result` containing the constructed `arrow::array::UnionArray` if successful, or an error otherwise.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the `UnionArray` cannot be created due to issues with the provided data.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use fastformat::image::Image;
-    ///
-    /// let data = vec![0; 640 * 480 * 3];
-    /// let image = Image::new_bgr8(data, 640, 480, None).unwrap();
-    ///
-    /// let arrow_array = image.into_arrow().unwrap();
-    /// ```
-    pub fn into_arrow(self) -> Result<arrow::array::UnionArray> {
-        let type_ids = [].into_iter().collect::<arrow::buffer::ScalarBuffer<i8>>();
-        let offsets = [].into_iter().collect::<arrow::buffer::ScalarBuffer<i32>>();
+    pub fn from_arrow(array_data: arrow::array::ArrayData) -> Result<Self> {
+        Self::from_raw_data(Self::raw_data(array_data)?)
+    }
 
-        fn union_field(
-            index: i8,
-            name: &str,
-            data_type: arrow::datatypes::DataType,
-            nullable: bool,
-        ) -> (i8, Arc<arrow::datatypes::Field>) {
-            (
-                index,
-                Arc::new(arrow::datatypes::Field::new(name, data_type, nullable)),
-            )
-        }
-
-        let datatype = match self.encoding {
-            Encoding::RGB8 => arrow::datatypes::DataType::UInt8,
-            Encoding::BGR8 => arrow::datatypes::DataType::UInt8,
-            Encoding::GRAY8 => arrow::datatypes::DataType::UInt8,
+    pub fn into_arrow(self) -> Result<arrow::array::ArrayData> {
+        use arrow::datatypes::{
+            DataType::{UInt32, UInt8, Utf8},
+            UInt32Type, UInt8Type,
         };
 
-        let union_fields = [
-            union_field(0, "data", datatype, false),
-            union_field(1, "width", arrow::datatypes::DataType::UInt32, false),
-            union_field(2, "height", arrow::datatypes::DataType::UInt32, false),
-            union_field(3, "encoding", arrow::datatypes::DataType::Utf8, false),
-            union_field(4, "name", arrow::datatypes::DataType::Utf8, true),
-        ]
-        .into_iter()
-        .collect::<arrow::datatypes::UnionFields>();
+        let raw_data = FastFormatArrowBuilder::new()
+            .push_primitive_singleton::<UInt32Type>("width", self.width, UInt32, false)
+            .push_primitive_singleton::<UInt32Type>("height", self.height, UInt32, false)
+            .push_utf_singleton("encoding", self.encoding.to_string(), Utf8, false)
+            .push_utf_singleton(
+                "name",
+                self.name.map_or_else(|| "".to_string(), |s| s),
+                Utf8,
+                false,
+            );
 
-        let children = Self::convert_image_details_into_arrow(self)?;
+        let raw_data = match self.encoding {
+            Encoding::RGB8 => raw_data.push_primitive_array::<UInt8Type>(
+                "data",
+                self.data.into_u8()?,
+                UInt8,
+                false,
+            ),
+            Encoding::BGR8 => raw_data.push_primitive_array::<UInt8Type>(
+                "data",
+                self.data.into_u8()?,
+                UInt8,
+                false,
+            ),
+            Encoding::GRAY8 => raw_data.push_primitive_array::<UInt8Type>(
+                "data",
+                self.data.into_u8()?,
+                UInt8,
+                false,
+            ),
+        };
 
-        arrow::array::UnionArray::try_new(union_fields, type_ids, Some(offsets), children)
-            .wrap_err("Failed to create UnionArray with Image data.")
+        raw_data.into_arrow()
     }
 }
 
@@ -200,17 +122,64 @@ mod tests {
         use crate::image::Image;
 
         let flat_image = vec![0; 27];
-        let original_buffer_address = flat_image.as_ptr();
+        let original_buffer_address = flat_image.as_ptr() as *const u64;
 
         let bgr8_image = Image::new_bgr8(flat_image, 3, 3, None).unwrap();
-        let image_buffer_address = bgr8_image.as_ptr();
+        let image_buffer_address = bgr8_image.data.as_ptr();
 
         let arrow_image = bgr8_image.into_arrow().unwrap();
 
-        let new_image = Image::from_arrow(arrow_image).unwrap();
-        let final_image_buffer = new_image.as_ptr();
+        let bgr8_image = Image::from_arrow(arrow_image).unwrap();
+        let bgr8_image_buffer = bgr8_image.data.as_ptr();
+
+        let rgb8_image = bgr8_image.into_rgb8().unwrap();
+        let rgb8_image_buffer = rgb8_image.data.as_ptr();
+
+        assert_eq!(original_buffer_address, image_buffer_address);
+        assert_eq!(image_buffer_address, bgr8_image_buffer);
+        assert_eq!(bgr8_image_buffer, rgb8_image_buffer);
+    }
+
+    #[test]
+    fn test_arrow_zero_copy_read_only() {
+        use crate::image::Image;
+
+        let flat_image = vec![0; 27];
+        let original_buffer_address = flat_image.as_ptr() as *const u64;
+
+        let bgr8_image = Image::new_bgr8(flat_image, 3, 3, None).unwrap();
+        let image_buffer_address = bgr8_image.data.as_ptr();
+
+        let arrow_image = bgr8_image.into_arrow().unwrap();
+
+        let raw_data = Image::raw_data(arrow_image).unwrap();
+        let new_image = Image::view_from_raw_data(&raw_data).unwrap();
+
+        let final_image_buffer = new_image.data.as_ptr();
 
         assert_eq!(original_buffer_address, image_buffer_address);
         assert_eq!(image_buffer_address, final_image_buffer);
+    }
+
+    #[test]
+    fn test_arrow_zero_copy_copy_on_write() {
+        use crate::image::Image;
+
+        let flat_image = vec![0; 27];
+        let original_buffer_address = flat_image.as_ptr() as *const u64;
+
+        let bgr8_image = Image::new_bgr8(flat_image, 3, 3, None).unwrap();
+        let image_buffer_address = bgr8_image.data.as_ptr();
+
+        let arrow_image = bgr8_image.into_arrow().unwrap();
+
+        let raw_data = Image::raw_data(arrow_image).unwrap();
+        let bgr8_image = Image::view_from_raw_data(&raw_data).unwrap();
+        let rgb8_image = bgr8_image.into_rgb8().unwrap();
+
+        let final_image_buffer = rgb8_image.data.as_ptr();
+
+        assert_eq!(original_buffer_address, image_buffer_address);
+        assert_ne!(image_buffer_address, final_image_buffer);
     }
 }

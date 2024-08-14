@@ -1,7 +1,7 @@
-use super::{container::DataContainer, encoding::Encoding, Image};
+use super::{data::ImageData, encoding::Encoding, Image};
 use eyre::{Context, Report, Result};
 
-impl Image {
+impl Image<'_> {
     /// Creates a new `Image` in BGR8 format.
     ///
     /// This function constructs a new `Image` object with the given pixel data, width, height,
@@ -40,7 +40,7 @@ impl Image {
         }
 
         Ok(Image {
-            data: DataContainer::from_u8(data),
+            data: ImageData::from_vec_u8(data),
             width,
             height,
             encoding: Encoding::BGR8,
@@ -266,16 +266,16 @@ mod tests {
         use crate::image::Image;
 
         let flat_image = vec![0; 27];
-        let original_buffer_address = flat_image.as_ptr();
+        let original_buffer_address = flat_image.as_ptr() as *const u64;
 
         let bgr8_image = Image::new_bgr8(flat_image, 3, 3, None).unwrap();
-        let image_buffer_address = bgr8_image.as_ptr();
+        let image_buffer_address = bgr8_image.data.as_ptr();
 
         let bgr8_ndarray = bgr8_image.bgr8_into_ndarray().unwrap();
-        let ndarray_buffer_address = bgr8_ndarray.as_ptr();
+        let ndarray_buffer_address = bgr8_ndarray.as_ptr() as *const u64;
 
         let final_image = Image::bgr8_from_ndarray(bgr8_ndarray, None).unwrap();
-        let final_image_buffer_address = final_image.as_ptr();
+        let final_image_buffer_address = final_image.data.as_ptr();
 
         assert_eq!(original_buffer_address, image_buffer_address);
         assert_eq!(image_buffer_address, ndarray_buffer_address);

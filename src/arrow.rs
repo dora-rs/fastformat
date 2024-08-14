@@ -1,169 +1,399 @@
-use std::collections::HashMap;
-
 use eyre::{Context, OptionExt, Report, Result};
+use std::{collections::HashMap, sync::Arc};
 
-/// Converts an Arrow `UnionArray` into a `HashMap`.
-///
-/// This function takes an Arrow `UnionArray` and converts it into a `HashMap` where the keys
-/// are the names of the fields and the values are the corresponding `ArrayRef` objects.
-///
-/// # Arguments
-///
-/// * `array` - An `arrow::array::UnionArray` containing the data to be converted.
-///
-/// # Returns
-///
-/// A `Result` containing the constructed `HashMap<String, arrow::array::ArrayRef>` if successful,
-/// or an error otherwise.
-///
-/// # Errors
-///
-/// Returns an error if the union array field index is invalid or if there are issues
-/// in accessing the children of the union array.
-pub fn arrow_union_into_map(
-    array: arrow::array::UnionArray,
-) -> Result<HashMap<String, arrow::array::ArrayRef>> {
-    let mut result = HashMap::new();
+pub struct FastFormatArrowRawData {
+    buffers: HashMap<String, arrow::buffer::Buffer>,
+    offset_buffers: HashMap<String, arrow::buffer::OffsetBuffer<i32>>,
 
-    let (union_fields, _, _, children) = array.into_parts();
-
-    for (a, b) in union_fields.iter() {
-        let child = children
-            .get(a as usize)
-            .ok_or_eyre(Report::msg(
-                "Invalid union array field index. Must be >= 0 and correspond to children index in the array.",
-            ))?
-            .clone();
-
-        result.insert(b.name().to_string(), child);
-    }
-
-    Ok(result)
+    array_data: HashMap<String, arrow::array::ArrayData>,
 }
 
-/// Extracts a primitive array from a `HashMap` and converts it to a `Vec`.
-///
-/// This function takes a `HashMap` containing `ArrayRef` objects, extracts the array corresponding
-/// to the specified field, and converts it into a `Vec` of the primitive type `T`.
-///
-/// # Arguments
-///
-/// * `field` - A string slice representing the key in the `HashMap`.
-/// * `map` - A mutable reference to the `HashMap<String, arrow::array::ArrayRef>`.
-///
-/// # Returns
-///
-/// A `Result` containing the constructed `Vec<T>` if successful, or an error otherwise.
-///
-/// # Type Parameters
-///
-/// * `T` - The native primitive type to be extracted.
-/// * `G` - The Arrow primitive type that corresponds to `T`.
-///
-/// # Errors
-///
-/// Returns an error if the specified field is not present in the `HashMap`, or if the type
-/// conversion fails.
-///
-/// # Example
-///
-/// ```
-/// use std::collections::HashMap;
-/// use arrow::array::{Int32Array, ArrayRef};
-/// use std::sync::Arc;
-///
-/// use fastformat::arrow::get_primitive_array_from_map;
-///
-/// let mut map = HashMap::new();
-/// map.insert("field".to_string(), Arc::new(Int32Array::from(vec![1, 2, 3])) as ArrayRef);
-///
-/// let result: Vec<i32> = get_primitive_array_from_map::<i32, arrow::datatypes::Int32Type>("field", &mut map).unwrap();
-/// ```
-pub fn get_primitive_array_from_map<
-    T: arrow::datatypes::ArrowNativeType,
-    G: arrow::datatypes::ArrowPrimitiveType,
->(
-    field: &str,
-    map: &mut HashMap<String, arrow::array::ArrayRef>,
-) -> Result<Vec<T>> {
-    use arrow::array::Array;
-
-    let array_data = map
-        .remove(field)
-        .ok_or_eyre(Report::msg("Invalid field for this map."))?
-        .into_data();
-
-    let array = arrow::array::PrimitiveArray::<G>::from(array_data);
-    let (_, buffer, _) = array.into_parts();
-    let buffer = buffer.into_inner();
-
-    match buffer.into_vec::<T>() {
-        Ok(vec) => Ok(vec),
-        Err(e) => Err(Report::msg(format!(
-            "T is not a valid type for this buffer. Must have the same layout as the buffer (it usually occurs when type is incorrect or when an other reference exists). Error: {:?}", e
-        ))),
-    }
+pub struct FastFormatArrowBuilder {
+    union_children: Vec<arrow::array::ArrayRef>,
+    union_fields: Vec<(i8, arrow::datatypes::FieldRef)>,
 }
 
-/// Extracts a UTF-8 encoded string array from a `HashMap` and converts it to a `Vec<String>`.
-///
-/// This function takes a `HashMap` containing `ArrayRef` objects, extracts the UTF-8 encoded
-/// string array corresponding to the specified field, and converts it into a `Vec<String>`.
-///
-/// # Arguments
-///
-/// * `field` - A string slice representing the key in the `HashMap`.
-/// * `map` - A mutable reference to the `HashMap<String, arrow::array::ArrayRef>`.
-///
-/// # Returns
-///
-/// A `Result` containing the constructed `Vec<String>` if successful, or an error otherwise.
-///
-/// # Errors
-///
-/// Returns an error if the specified field is not present in the `HashMap`, or if the array
-/// is not UTF-8 encoded.
-///
-/// # Example
-///
-/// ```
-/// use std::collections::HashMap;
-/// use arrow::array::{StringArray, ArrayRef};
-/// use std::sync::Arc;
-///
-/// use fastformat::arrow::get_utf8_array_from_map;
-///
-/// let mut map = HashMap::new();
-/// map.insert("field".to_string(), Arc::new(StringArray::from(vec!["a", "b", "c"])) as ArrayRef);
-///
-/// let result = get_utf8_array_from_map("field", &mut map).unwrap();
-/// ```
-pub fn get_utf8_array_from_map(
-    field: &str,
-    map: &mut HashMap<String, arrow::array::ArrayRef>,
-) -> Result<Vec<String>> {
-    use arrow::array::Array;
+impl FastFormatArrowRawData {
+    pub fn new(array_data: arrow::array::ArrayData) -> Result<Self> {
+        use arrow::array::Array;
 
-    let array_data = map
-        .remove(field)
-        .ok_or_eyre(Report::msg("Invalid field for this map."))?
-        .into_data();
+        let array = arrow::array::UnionArray::from(array_data);
 
-    let array = arrow::array::StringArray::from(array_data);
-    let (offsets, buffer, _) = array.into_parts();
+        let mut result = HashMap::new();
 
-    let slice = buffer.as_slice();
-    let mut last_offset = 0;
-    let mut iterator = offsets.iter();
-    iterator.next();
+        let (union_fields, _, _, children) = array.into_parts();
 
-    iterator
-        .map(|&offset| {
-            let offset = offset as usize;
-            let slice = &slice[last_offset..offset];
-            last_offset = offset;
+        for (a, b) in union_fields.iter() {
+            let child = children
+                .get(a as usize)
+                .ok_or_eyre(Report::msg(
+                    format!(
+                        "Invalid union array field {}'s index (= {}). Must be >= 0 and correspond to children index in the array",
+                        b, a
+                    ),
+                ))?
+                .clone()
+                .into_data();
 
-            String::from_utf8(slice.to_vec()).wrap_err(Report::msg("Array is not UTF-8 encoded."))
+            result.insert(b.name().to_string(), child);
+        }
+
+        Ok(Self {
+            buffers: HashMap::new(),
+            offset_buffers: HashMap::new(),
+            array_data: result,
         })
-        .collect::<Result<Vec<String>>>()
+    }
+
+    pub fn load_primitive<T: arrow::datatypes::ArrowPrimitiveType>(
+        self,
+        field: &str,
+    ) -> Result<Self> {
+        let mut array_data = self.array_data;
+        let mut buffers = self.buffers;
+        let offset_buffers = self.offset_buffers;
+
+        let data = array_data.remove(field).ok_or_eyre(Report::msg(format!(
+            "Invalid field {} for this map of data",
+            field
+        )))?;
+
+        let array = arrow::array::PrimitiveArray::<T>::from(data);
+        let (_, buffer, _) = array.into_parts();
+
+        buffers.insert(field.to_string(), buffer.into_inner());
+
+        Ok(Self {
+            buffers,
+            offset_buffers,
+            array_data,
+        })
+    }
+
+    pub fn load_utf(self, field: &str) -> Result<Self> {
+        let mut array_data = self.array_data;
+        let mut buffers = self.buffers;
+        let mut offset_buffers = self.offset_buffers;
+
+        let data = array_data.remove(field).ok_or_eyre(Report::msg(format!(
+            "Invalid field {} for this map of data",
+            field
+        )))?;
+
+        let array = arrow::array::StringArray::from(data);
+        let (offset_buffer, buffer, _) = array.into_parts();
+
+        buffers.insert(field.to_string(), buffer);
+        offset_buffers.insert(field.to_string(), offset_buffer);
+
+        Ok(Self {
+            buffers,
+            offset_buffers,
+            array_data,
+        })
+    }
+
+    pub fn utf8_singleton(&self, field: &str) -> Result<String> {
+        let buffer = self.buffers.get(field).ok_or_eyre(Report::msg(format!(
+            "Invalid field {} for this map of data",
+            field
+        )))?;
+
+        let offset_buffer = self
+            .offset_buffers
+            .get(field)
+            .ok_or_eyre(Report::msg(format!(
+                "Invalid field {} for this map of data",
+                field
+            )))?;
+
+        let slice = buffer.as_slice();
+        let mut iterator = offset_buffer.iter();
+        iterator.next();
+
+        let last_offset = iterator.next().cloned().ok_or_eyre(Report::msg(format!(
+            "No offset associated with field {}",
+            field
+        )))? as usize;
+
+        let slice = &slice[0..last_offset];
+
+        String::from_utf8(slice.to_vec()).wrap_err(Report::msg("Invalid UTF-8 string"))
+    }
+
+    pub fn utf16_singleton(&self, field: &str) -> Result<String> {
+        let buffer = self.buffers.get(field).ok_or_eyre(Report::msg(format!(
+            "Invalid field {} for this map of data",
+            field
+        )))?;
+
+        let offset_buffer = self
+            .offset_buffers
+            .get(field)
+            .ok_or_eyre(Report::msg(format!(
+                "Invalid field {} for this map of data",
+                field
+            )))?;
+
+        let slice = buffer.typed_data::<u16>();
+        let mut iterator = offset_buffer.iter();
+        iterator.next();
+
+        let last_offset = iterator.next().cloned().ok_or_eyre(Report::msg(format!(
+            "No offset associated with field {}",
+            field
+        )))? as usize;
+
+        let slice = &slice[0..last_offset];
+
+        String::from_utf16(slice).wrap_err(Report::msg("Invalid UTF-16 string"))
+    }
+
+    pub fn primitive_singleton<T: arrow::datatypes::ArrowPrimitiveType>(
+        &self,
+        field: &str,
+    ) -> Result<T::Native> {
+        let buffer = self.buffers.get(field).ok_or_eyre(Report::msg(format!(
+            "Invalid field {} for this map of data",
+            field
+        )))?;
+
+        let slice = buffer.typed_data::<T::Native>();
+
+        Ok(slice[0])
+    }
+
+    pub fn utf8_array(&self, field: &str) -> Result<Vec<String>> {
+        let buffer = self.buffers.get(field).ok_or_eyre(Report::msg(format!(
+            "Invalid field {} for this map of data",
+            field
+        )))?;
+
+        let offset_buffer = self
+            .offset_buffers
+            .get(field)
+            .ok_or_eyre(Report::msg(format!(
+                "Invalid field {} for this map of data",
+                field
+            )))?;
+
+        let slice = buffer.as_slice();
+        let mut iterator = offset_buffer.iter();
+        iterator.next();
+
+        let mut last_offset = 0;
+
+        iterator
+            .map(|&offset| {
+                let offset = offset as usize;
+                let slice = &slice[last_offset..offset];
+                last_offset = offset;
+
+                String::from_utf8(slice.to_vec())
+                    .wrap_err(Report::msg("Array is not UTF-8 encoded."))
+            })
+            .collect::<Result<Vec<String>>>()
+    }
+
+    pub fn utf16_array(&self, field: &str) -> Result<Vec<String>> {
+        let buffer = self.buffers.get(field).ok_or_eyre(Report::msg(format!(
+            "Invalid field {} for this map of data",
+            field
+        )))?;
+
+        let offset_buffer = self
+            .offset_buffers
+            .get(field)
+            .ok_or_eyre(Report::msg(format!(
+                "Invalid field {} for this map of data",
+                field
+            )))?;
+
+        let slice = buffer.typed_data::<u16>();
+        let mut iterator = offset_buffer.iter();
+        iterator.next();
+
+        let mut last_offset = 0;
+
+        iterator
+            .map(|&offset| {
+                let offset = offset as usize;
+                let slice = &slice[last_offset..offset];
+                last_offset = offset;
+
+                String::from_utf16(slice).wrap_err(Report::msg("Array is not UTF-16 encoded."))
+            })
+            .collect::<Result<Vec<String>>>()
+    }
+
+    pub fn primitive_array_view<'a, T: arrow::datatypes::ArrowPrimitiveType>(
+        &'a self,
+        field: &str,
+    ) -> Result<&'a [T::Native]> {
+        let buffer = self.buffers.get(field).ok_or_eyre(Report::msg(format!(
+            "Invalid field {} for this map of data",
+            field
+        )))?;
+
+        let slice = buffer.typed_data::<T::Native>();
+
+        Ok(slice)
+    }
+
+    pub fn primitive_array<T: arrow::datatypes::ArrowPrimitiveType>(
+        &mut self,
+        field: &str,
+    ) -> Result<Vec<T::Native>> {
+        let buffer = self.buffers.remove(field).ok_or_eyre(Report::msg(format!(
+            "Invalid field {} for this map of data",
+            field
+        )))?;
+
+        match buffer.into_vec::<T::Native>() {
+            Ok(vec) => Ok(vec),
+            Err(buffer) => {
+                self.buffers.insert(field.to_string(), buffer);
+
+                Err(Report::msg("Invalid primitive array type. Or the buffer is shared. If you're not sure that the buffer is owned, use primitive_array_view instead."))
+            }
+        }
+    }
+}
+
+impl FastFormatArrowBuilder {
+    pub fn new() -> Self {
+        Self {
+            union_children: Vec::new(),
+            union_fields: Vec::new(),
+        }
+    }
+
+    pub fn push_primitive_singleton<T: arrow::datatypes::ArrowPrimitiveType>(
+        self,
+        field: &str,
+        value: T::Native,
+        data_type: arrow::datatypes::DataType,
+        nullable: bool,
+    ) -> Self {
+        let mut union_children = self.union_children;
+        let mut union_fields = self.union_fields;
+
+        let index = union_children.len();
+
+        let data = Arc::new(arrow::array::PrimitiveArray::<T>::from_value(value, 1));
+        union_children.push(data);
+
+        let field = (
+            index as i8,
+            Arc::new(arrow::datatypes::Field::new(field, data_type, nullable)),
+        );
+        union_fields.push(field);
+
+        Self {
+            union_children,
+            union_fields,
+        }
+    }
+
+    pub fn push_primitive_array<T: arrow::datatypes::ArrowPrimitiveType>(
+        self,
+        field: &str,
+        value: Vec<T::Native>,
+        data_type: arrow::datatypes::DataType,
+        nullable: bool,
+    ) -> Self {
+        let mut union_children = self.union_children;
+        let mut union_fields = self.union_fields;
+
+        let index = union_children.len();
+
+        let data = Arc::new(arrow::array::PrimitiveArray::<T>::from_iter_values(value));
+        union_children.push(data);
+
+        let field = (
+            index as i8,
+            Arc::new(arrow::datatypes::Field::new(field, data_type, nullable)),
+        );
+        union_fields.push(field);
+
+        Self {
+            union_children,
+            union_fields,
+        }
+    }
+
+    pub fn push_utf_singleton(
+        self,
+        field: &str,
+        value: String,
+        data_type: arrow::datatypes::DataType,
+        nullable: bool,
+    ) -> Self {
+        let mut union_children = self.union_children;
+        let mut union_fields = self.union_fields;
+
+        let index = union_children.len();
+
+        let data = Arc::new(arrow::array::StringArray::from(vec![value]));
+        union_children.push(data);
+
+        let field = (
+            index as i8,
+            Arc::new(arrow::datatypes::Field::new(field, data_type, nullable)),
+        );
+        union_fields.push(field);
+
+        Self {
+            union_children,
+            union_fields,
+        }
+    }
+
+    pub fn push_utf_array(
+        self,
+        field: &str,
+        value: Vec<String>,
+        data_type: arrow::datatypes::DataType,
+        nullable: bool,
+    ) -> Self {
+        let mut union_children = self.union_children;
+        let mut union_fields = self.union_fields;
+
+        let index = union_children.len();
+
+        let data = Arc::new(arrow::array::StringArray::from(value));
+        union_children.push(data);
+
+        let field = (
+            index as i8,
+            Arc::new(arrow::datatypes::Field::new(field, data_type, nullable)),
+        );
+        union_fields.push(field);
+
+        Self {
+            union_children,
+            union_fields,
+        }
+    }
+
+    pub fn into_arrow(self) -> Result<arrow::array::ArrayData> {
+        use arrow::array::Array;
+
+        let type_ids = [].into_iter().collect::<arrow::buffer::ScalarBuffer<i8>>();
+        let offsets = [].into_iter().collect::<arrow::buffer::ScalarBuffer<i32>>();
+
+        let union_fields = self
+            .union_fields
+            .into_iter()
+            .collect::<arrow::datatypes::UnionFields>();
+
+        Ok(arrow::array::UnionArray::try_new(
+            union_fields,
+            type_ids,
+            Some(offsets),
+            self.union_children,
+        )
+        .wrap_err("Failed to create UnionArray with Image data.")?
+        .into_data())
+    }
 }

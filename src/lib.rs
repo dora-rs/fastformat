@@ -1,6 +1,6 @@
 use pyo3::prelude::*;
 
-pub mod arrow;
+mod arrow;
 
 pub mod bbox;
 pub mod image;
