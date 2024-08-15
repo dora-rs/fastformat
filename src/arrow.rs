@@ -1,21 +1,22 @@
-use arrow::array::Array;
 use eyre::{Context, OptionExt, Report, Result};
 use std::{collections::HashMap, sync::Arc};
 
-pub struct RawData {
+pub struct FastFormatArrowRawData {
     buffers: HashMap<String, arrow::buffer::Buffer>,
     offset_buffers: HashMap<String, arrow::buffer::OffsetBuffer<i32>>,
 
     array_data: HashMap<String, arrow::array::ArrayData>,
 }
 
-pub struct UnionBuilder {
+pub struct FastFormatArrowBuilder {
     union_children: Vec<arrow::array::ArrayRef>,
     union_fields: Vec<(i8, arrow::datatypes::FieldRef)>,
 }
 
-impl RawData {
+impl FastFormatArrowRawData {
     pub fn new(array_data: arrow::array::ArrayData) -> Result<Self> {
+        use arrow::array::Array;
+
         let array = arrow::array::UnionArray::from(array_data);
 
         let mut result = HashMap::new();
@@ -259,7 +260,7 @@ impl RawData {
     }
 }
 
-impl UnionBuilder {
+impl FastFormatArrowBuilder {
     pub fn new() -> Self {
         Self {
             union_children: Vec::new(),
@@ -376,6 +377,8 @@ impl UnionBuilder {
     }
 
     pub fn into_arrow(self) -> Result<arrow::array::ArrayData> {
+        use arrow::array::Array;
+
         let type_ids = [].into_iter().collect::<arrow::buffer::ScalarBuffer<i8>>();
         let offsets = [].into_iter().collect::<arrow::buffer::ScalarBuffer<i32>>();
 

@@ -2,13 +2,13 @@ use super::{data::ImageData, encoding::Encoding, Image};
 
 use eyre::Result;
 
-use crate::arrow::{RawData, UnionBuilder};
+use crate::arrow::{FastFormatArrowBuilder, FastFormatArrowRawData};
 
 impl<'a> Image<'a> {
-    pub fn raw_data(array_data: arrow::array::ArrayData) -> Result<RawData> {
+    pub fn raw_data(array_data: arrow::array::ArrayData) -> Result<FastFormatArrowRawData> {
         use arrow::datatypes::{UInt32Type, UInt8Type};
 
-        let raw_data = RawData::new(array_data)?
+        let raw_data = FastFormatArrowRawData::new(array_data)?
             .load_primitive::<UInt32Type>("width")?
             .load_primitive::<UInt32Type>("height")?
             .load_utf("encoding")?
@@ -24,7 +24,7 @@ impl<'a> Image<'a> {
         Ok(raw_data)
     }
 
-    pub fn from_raw_data(mut raw_data: RawData) -> Result<Self> {
+    pub fn from_raw_data(mut raw_data: FastFormatArrowRawData) -> Result<Self> {
         use arrow::datatypes::{UInt32Type, UInt8Type};
 
         let width = raw_data.primitive_singleton::<UInt32Type>("width")?;
@@ -47,7 +47,7 @@ impl<'a> Image<'a> {
         })
     }
 
-    pub fn view_from_raw_data(raw_data: &'a RawData) -> Result<Self> {
+    pub fn view_from_raw_data(raw_data: &'a FastFormatArrowRawData) -> Result<Self> {
         use arrow::datatypes::{UInt32Type, UInt8Type};
 
         let width = raw_data.primitive_singleton::<UInt32Type>("width")?;
@@ -80,7 +80,7 @@ impl<'a> Image<'a> {
             UInt32Type, UInt8Type,
         };
 
-        let raw_data = UnionBuilder::new()
+        let raw_data = FastFormatArrowBuilder::new()
             .push_primitive_singleton::<UInt32Type>("width", self.width, UInt32, false)
             .push_primitive_singleton::<UInt32Type>("height", self.height, UInt32, false)
             .push_utf_singleton("encoding", self.encoding.to_string(), Utf8, false)

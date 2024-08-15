@@ -1,15 +1,15 @@
 use std::borrow::Cow;
 
 use super::{encoding::Encoding, BBox};
-use crate::arrow::{RawData, UnionBuilder};
+use crate::arrow::{FastFormatArrowBuilder, FastFormatArrowRawData};
 
 use eyre::Result;
 
 impl<'a> BBox<'a> {
-    pub fn raw_data(array_data: arrow::array::ArrayData) -> Result<RawData> {
+    pub fn raw_data(array_data: arrow::array::ArrayData) -> Result<FastFormatArrowRawData> {
         use arrow::datatypes::Float32Type;
 
-        let raw_data = RawData::new(array_data)?
+        let raw_data = FastFormatArrowRawData::new(array_data)?
             .load_primitive::<Float32Type>("data")?
             .load_primitive::<Float32Type>("confidence")?
             .load_utf("label")?
@@ -18,7 +18,7 @@ impl<'a> BBox<'a> {
         Ok(raw_data)
     }
 
-    pub fn from_raw_data(mut raw_data: RawData) -> Result<Self> {
+    pub fn from_raw_data(mut raw_data: FastFormatArrowRawData) -> Result<Self> {
         use arrow::datatypes::Float32Type;
 
         let data = raw_data.primitive_array::<Float32Type>("data")?;
@@ -34,7 +34,7 @@ impl<'a> BBox<'a> {
         })
     }
 
-    pub fn view_from_raw_data(raw_data: &'a RawData) -> Result<Self> {
+    pub fn view_from_raw_data(raw_data: &'a FastFormatArrowRawData) -> Result<Self> {
         use arrow::datatypes::Float32Type;
 
         let data = raw_data.primitive_array_view::<Float32Type>("data")?;
@@ -60,7 +60,7 @@ impl<'a> BBox<'a> {
             Float32Type,
         };
 
-        let raw_data = UnionBuilder::new()
+        let raw_data = FastFormatArrowBuilder::new()
             .push_primitive_array::<Float32Type>("data", self.data.into_owned(), Float32, false)
             .push_primitive_array::<Float32Type>(
                 "confidence",
@@ -100,5 +100,53 @@ mod tests {
         assert_eq!(original_buffer_address, bbox_buffer_address);
         assert_eq!(bbox_buffer_address, xyxy_bbox_buffer);
         assert_eq!(xyxy_bbox_buffer, xywh_bbox_buffer);
+    }
+
+    #[test]
+    fn test_arrow_zero_copy_read_only() {
+        use crate::bbox::BBox;
+
+        let flat_bbox = vec![1.0, 1.0, 2.0, 2.0];
+        let original_buffer_address = flat_bbox.as_ptr();
+
+        let confidence = vec![0.98];
+        let label = vec!["cat".to_string()];
+
+        let xyxy_bbox = BBox::new_xyxy(flat_bbox, confidence, label).unwrap();
+        let bbox_buffer_address = xyxy_bbox.data.as_ptr();
+
+        let arrow_bbox = xyxy_bbox.into_arrow().unwrap();
+
+        let raw_data = BBox::raw_data(arrow_bbox).unwrap();
+        let xyxy_bbox = BBox::view_from_raw_data(&raw_data).unwrap();
+        let xyxy_bbox_buffer = xyxy_bbox.data.as_ptr();
+
+        assert_eq!(original_buffer_address, bbox_buffer_address);
+        assert_eq!(bbox_buffer_address, xyxy_bbox_buffer);
+    }
+
+    #[test]
+    fn test_arrow_zero_copy_copy_on_write() {
+        use crate::bbox::BBox;
+
+        let flat_bbox = vec![1.0, 1.0, 2.0, 2.0];
+        let original_buffer_address = flat_bbox.as_ptr();
+
+        let confidence = vec![0.98];
+        let label = vec!["cat".to_string()];
+
+        let xyxy_bbox = BBox::new_xyxy(flat_bbox, confidence, label).unwrap();
+        let bbox_buffer_address = xyxy_bbox.data.as_ptr();
+
+        let arrow_bbox = xyxy_bbox.into_arrow().unwrap();
+
+        let raw_data = BBox::raw_data(arrow_bbox).unwrap();
+        let xyxy_bbox = BBox::view_from_raw_data(&raw_data).unwrap();
+        let xywh_bbox = xyxy_bbox.into_xywh().unwrap();
+
+        let final_bbox_buffer = xywh_bbox.data.as_ptr();
+
+        assert_eq!(original_buffer_address, bbox_buffer_address);
+        assert_ne!(bbox_buffer_address, final_bbox_buffer);
     }
 }
