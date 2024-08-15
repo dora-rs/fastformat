@@ -1,0 +1,28 @@
+nodes:
+  - id: sender-raw
+    build: cargo build --manifest-path ./sender-raw/Cargo.toml --release
+    path: ./sender-raw/target/release/dora-benchmark-sender-raw
+    outputs:
+      - latency
+      - throughput
+
+  - id: receiver-raw
+    build: cargo build --manifest-path ./receiver-raw/Cargo.toml --release
+    path: ./receiver-raw/target/release/dora-benchmark-receiver-raw
+    inputs:
+      latency: sender-raw/latency
+      throughput: sender-raw/throughput
+
+  - id: sender-fastformat
+    build: cargo build --manifest-path ./sender-fastformat/Cargo.toml --release
+    path: ./sender-fastformat/target/release/dora-benchmark-sender-fastformat
+    outputs:
+      - latency
+      - throughput
+
+  - id: receiver-fastformat
+    build: cargo build --manifest-path ./receiver-fastformat/Cargo.toml --release
+    path: ./receiver-fastformat/target/release/dora-benchmark-receiver-fastformat
+    inputs:
+      latency: sender-fastformat/latency
+      throughput: sender-fastformat/throughput
