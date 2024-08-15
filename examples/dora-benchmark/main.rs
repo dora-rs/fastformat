@@ -7,7 +7,7 @@ fn main() -> Result<()> {
     std::env::set_current_dir(root.join(file!()).parent().unwrap())
         .wrap_err("failed to set working dir")?;
 
-    let dataflow = Path::new("dataflow-fastformat.yml");
+    let dataflow = Path::new("dataflow.yml");
 
     destroy_dora()?;
     spawn_dora()?;

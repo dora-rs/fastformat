@@ -1,0 +1,12 @@
+Latency:
+size 0xfd200 : 668.844µs
+size 0x2a3000: 784.455µs
+size 0x5eec00: 1.186606ms
+size 0x17bb000: 2.030822ms
+Throughput:
+size 0xfd200 : 176 messages per second
+size 0x2a3000: 1876 messages per second
+size 0x5eec00: 603 messages per second
+Input `latency` was closed
+Input `throughput` was closed
+size 0x17bb000: 155 messages per second

@@ -34,7 +34,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for (width, height, c) in &sizes {
         let (width, height, c) = (width.clone(), height.clone(), c.clone());
         let size = (width * height * c) as usize;
-        for _ in 0..100 {
+        for _ in 0..1000 {
             let data = data.get(&size).unwrap();
             let image = Image::new_bgr8(data.clone(), width, height, None)?;
 
@@ -61,7 +61,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for (width, height, c) in &sizes {
         let (width, height, c) = (width.clone(), height.clone(), c.clone());
         let size = (width * height * c) as usize;
-        for _ in 0..100 {
+        for _ in 0..1000 {
             let data = data.get(&size).unwrap();
             let image = Image::new_bgr8(data.clone(), width, height, None)?;
 

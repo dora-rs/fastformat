@@ -4,20 +4,24 @@ use rand::Rng;
 use std::collections::HashMap;
 use std::time::Duration;
 
+use fastformat::image::Image;
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let latency = DataId::from("latency".to_owned());
     let throughput = DataId::from("throughput".to_owned());
 
     let (mut node, _events) = DoraNode::init_from_env()?;
-    let sizes = [
-        720 * 480 * 3,
-        1280 * 720 * 3,
-        1920 * 1080 * 3,
-        3840 * 2160 * 3,
+
+    let sizes: [(u32, u32, u32); 4] = [
+        (720, 480, 3),
+        (1280, 720, 3),
+        (1920, 1080, 3),
+        (3840, 2160, 3),
     ];
 
     let mut data = HashMap::new();
-    for size in sizes {
+    for (width, height, c) in &sizes {
+        let size = (width * height * c) as usize;
         let vec: Vec<u8> = rand::thread_rng()
             .sample_iter(rand::distributions::Standard)
             .take(size)
@@ -27,8 +31,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // test latency first
-    for size in sizes {
-        for _ in 0..100 {
+    for (width, height, c) in &sizes {
+        let (width, height, c) = (width.clone(), height.clone(), c.clone());
+        let size = (width * height * c) as usize;
+        for _ in 0..1000 {
             let data = data.get(&size).unwrap();
 
             node.send_output_raw(latency.clone(), Default::default(), data.len(), |out| {
@@ -44,8 +50,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     std::thread::sleep(Duration::from_secs(2));
 
     // then throughput with full speed
-    for size in sizes {
-        for _ in 0..100 {
+    for (width, height, c) in &sizes {
+        let (width, height, c) = (width.clone(), height.clone(), c.clone());
+        let size = (width * height * c) as usize;
+        for _ in 0..1000 {
             let data = data.get(&size).unwrap();
 
             node.send_output_raw(throughput.clone(), Default::default(), data.len(), |out| {
