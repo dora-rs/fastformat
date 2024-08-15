@@ -528,13 +528,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "dora-benchmark-sender"
+name = "dora-benchmark-receiver-raw"
 version = "0.1.0"
 dependencies = [
  "arrow",
  "dora-node-api",
  "fastformat",
- "rand",
 ]
 
 [[package]]

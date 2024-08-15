@@ -1,0 +1,14 @@
+nodes:
+  - id: sender
+    build: cargo build --manifest-path ./sender-fastformat/Cargo.toml --release
+    path: ./sender-fastformat/target/release/dora-benchmark-sender-fastformat
+    outputs:
+      - latency
+      - throughput
+
+  - id: receiver
+    build: cargo build --manifest-path ./receiver-fastformat/Cargo.toml --release
+    path: ./receiver-fastformat/target/release/dora-benchmark-receiver-fastformat
+    inputs:
+      latency: sender/latency
+      throughput: sender/throughput

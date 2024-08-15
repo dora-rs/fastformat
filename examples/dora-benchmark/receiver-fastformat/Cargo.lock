@@ -528,7 +528,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "dora-benchmark-receiver"
+name = "dora-benchmark-receiver-fastformat"
 version = "0.1.0"
 dependencies = [
  "arrow",

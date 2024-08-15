@@ -10,6 +10,14 @@ pub enum ImageData<'a> {
 }
 
 impl ImageData<'_> {
+    pub fn len(&self) -> usize {
+        match self {
+            Self::U8(data) => data.len(),
+            Self::U16(data) => data.len(),
+            Self::F32(data) => data.len(),
+        }
+    }
+
     pub fn as_ptr(&self) -> *const u64 {
         match self {
             Self::U8(data) => data.as_ptr() as *const u64,
