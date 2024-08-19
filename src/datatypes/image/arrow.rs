@@ -119,7 +119,7 @@ impl<'a> Image<'a> {
 mod tests {
     #[test]
     fn test_arrow_zero_copy_conversion() {
-        use crate::image::Image;
+        use crate::datatypes::Image;
 
         let flat_image = vec![0; 27];
         let original_buffer_address = flat_image.as_ptr() as *const u64;
@@ -142,7 +142,7 @@ mod tests {
 
     #[test]
     fn test_arrow_zero_copy_read_only() {
-        use crate::image::Image;
+        use crate::datatypes::Image;
 
         let flat_image = vec![0; 27];
         let original_buffer_address = flat_image.as_ptr() as *const u64;
@@ -163,7 +163,7 @@ mod tests {
 
     #[test]
     fn test_arrow_zero_copy_copy_on_write() {
-        use crate::image::Image;
+        use crate::datatypes::Image;
 
         let flat_image = vec![0; 27];
         let original_buffer_address = flat_image.as_ptr() as *const u64;

@@ -27,7 +27,7 @@ impl Image<'_> {
     /// # Example
     ///
     /// ```
-    /// use fastformat::image::Image;
+    /// use fastformat::datatypes::Image;
     ///
     /// let data = vec![0; 9]; // 3x3 image with 1 byte per pixel
     /// let image = Image::new_gray8(data, 3, 3, Some("example")).unwrap();
@@ -68,7 +68,7 @@ impl Image<'_> {
     ///
     /// ```
     /// use ndarray::Array2;
-    /// use fastformat::image::Image;
+    /// use fastformat::datatypes::Image;
     ///
     /// let array = Array2::<u8>::zeros((3, 3)); // 3x3 image
     /// let image = Image::gray8_from_ndarray(array, Some("example")).unwrap();
@@ -106,7 +106,7 @@ impl Image<'_> {
     /// # Example
     ///
     /// ```
-    /// use fastformat::image::Image;
+    /// use fastformat::datatypes::Image;
     ///
     /// let data = vec![0; 9]; // 3x3 image with 1 byte per pixel
     /// let image = Image::new_gray8(data, 3, 3, Some("example")).unwrap();
@@ -145,7 +145,7 @@ impl Image<'_> {
     /// # Example
     ///
     /// ```
-    /// use fastformat::image::Image;
+    /// use fastformat::datatypes::Image;
     ///
     /// let data = vec![0; 9]; // 3x3 image with 1 byte per pixel
     /// let image = Image::new_gray8(data, 3, 3, Some("example")).unwrap();
@@ -184,7 +184,7 @@ impl Image<'_> {
     /// # Example
     ///
     /// ```
-    /// use fastformat::image::Image;
+    /// use fastformat::datatypes::Image;
     ///
     /// let data = vec![0; 9]; // 3x3 image with 1 byte per pixel
     /// let mut image = Image::new_gray8(data, 3, 3, Some("example")).unwrap();
@@ -208,7 +208,7 @@ impl Image<'_> {
 mod test {
     #[test]
     fn test_gray8_creation() {
-        use crate::image::Image;
+        use crate::datatypes::Image;
 
         let flat_image = (1..10).collect::<Vec<u8>>();
 
@@ -219,7 +219,7 @@ mod test {
     fn test_gray8_from_ndarray() {
         use ndarray::Array2;
 
-        use crate::image::Image;
+        use crate::datatypes::Image;
 
         let array = Array2::<u8>::zeros((3, 3));
 
@@ -228,7 +228,7 @@ mod test {
 
     #[test]
     fn test_gray8_into_ndarray() {
-        use crate::image::Image;
+        use crate::datatypes::Image;
 
         let flat_image = (1..10).collect::<Vec<u8>>();
 
@@ -239,7 +239,7 @@ mod test {
 
     #[test]
     fn test_gray8_into_ndarray_view() {
-        use crate::image::Image;
+        use crate::datatypes::Image;
 
         let flat_image = (1..10).collect::<Vec<u8>>();
 
@@ -250,7 +250,7 @@ mod test {
 
     #[test]
     fn test_gray8_into_ndarray_view_mut() {
-        use crate::image::Image;
+        use crate::datatypes::Image;
 
         let flat_image = (1..10).collect::<Vec<u8>>();
 
@@ -261,7 +261,7 @@ mod test {
 
     #[test]
     fn test_gray8_ndarray_zero_copy_conversion() {
-        use crate::image::Image;
+        use crate::datatypes::Image;
 
         let flat_image = (1..10).collect::<Vec<u8>>();
         let original_buffer_address = flat_image.as_ptr() as *const u64;

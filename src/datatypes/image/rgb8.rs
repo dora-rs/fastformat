@@ -2,15 +2,15 @@ use super::{data::ImageData, encoding::Encoding, Image};
 use eyre::{Context, Report, Result};
 
 impl Image<'_> {
-    /// Creates a new `Image` in BGR8 format.
+    /// Creates a new `Image` in RGB8 format.
     ///
     /// This function constructs a new `Image` object with the given pixel data, width, height,
     /// and an optional name. It ensures that the pixel data length matches the expected size
-    /// for the given width, height, and BGR8 encoding (3 bytes per pixel).
+    /// for the given width and height.
     ///
     /// # Arguments
     ///
-    /// * `data` - A `Vec<u8>` containing the pixel data in BGR8 format.
+    /// * `data` - A `Vec<u8>` containing the pixel data in RGB8 format.
     /// * `width` - The width of the image.
     /// * `height` - The height of the image.
     /// * `name` - An optional string slice representing the name of the image.
@@ -22,40 +22,38 @@ impl Image<'_> {
     /// # Errors
     ///
     /// Returns an error if the length of the pixel data does not match the expected size
-    /// based on the width, height, and BGR8 encoding.
+    /// based on the width and height.
     ///
     /// # Example
     ///
     /// ```
-    /// use fastformat::image::Image;
+    /// use fastformat::datatypes::Image;
     ///
     /// let data = vec![0; 27]; // 3x3 image with 3 bytes per pixel
-    /// let image = Image::new_bgr8(data, 3, 3, Some("example")).unwrap();
+    /// let image = Image::new_rgb8(data, 3, 3, Some("example")).unwrap();
     /// ```
-    pub fn new_bgr8(data: Vec<u8>, width: u32, height: u32, name: Option<&str>) -> Result<Self> {
-        if width * height * 3 != data.len() as u32 {
-            return Err(Report::msg(
-                "Width, height and BGR8 encoding doesn't match data length.",
-            ));
+    pub fn new_rgb8(data: Vec<u8>, width: u32, height: u32, name: Option<&str>) -> Result<Self> {
+        if data.len() != (width * height * 3) as usize {
+            return Err(Report::msg("Invalid pixel data length."));
         }
 
         Ok(Image {
             data: ImageData::from_vec_u8(data),
             width,
             height,
-            encoding: Encoding::BGR8,
+            encoding: Encoding::RGB8,
             name: name.map(|s| s.to_string()),
         })
     }
 
-    /// Creates a new `Image` in BGR8 format from an ndarray.
+    /// Creates a new `Image` in RGB8 format from an ndarray.
     ///
     /// This function constructs a new `Image` object from an `ndarray::Array` with shape (height, width, 3).
     /// It converts the ndarray into a raw vector and uses it to create the `Image`.
     ///
     /// # Arguments
     ///
-    /// * `array` - An `ndarray::Array<u8, ndarray::Ix3>` containing the pixel data in BGR8 format.
+    /// * `array` - An `ndarray::Array<u8, ndarray::Ix3>` containing the pixel data in RGB8 format.
     /// * `name` - An optional string slice representing the name of the image.
     ///
     /// # Returns
@@ -70,12 +68,12 @@ impl Image<'_> {
     ///
     /// ```
     /// use ndarray::Array3;
-    /// use fastformat::image::Image;
+    /// use fastformat::datatypes::Image;
     ///
-    /// let array = Array3::<u8>::zeros((3, 3, 3)); // 3x3 image with 3 channels
-    /// let image = Image::bgr8_from_ndarray(array, Some("example")).unwrap();
+    /// let array = Array3::<u8>::zeros((3, 3, 3)); // 3x3 image with 3 bytes per pixel
+    /// let image = Image::rgb8_from_ndarray(array, Some("example")).unwrap();
     /// ```
-    pub fn bgr8_from_ndarray(
+    pub fn rgb8_from_ndarray(
         array: ndarray::Array<u8, ndarray::Ix3>,
         name: Option<&str>,
     ) -> Result<Self> {
@@ -84,12 +82,12 @@ impl Image<'_> {
 
         let data = array.into_raw_vec();
 
-        Self::new_bgr8(data, width, height, name)
+        Self::new_rgb8(data, width, height, name)
     }
 
-    /// Converts a BGR8 `Image` into an ndarray.
+    /// Converts an RGB8 `Image` into an ndarray.
     ///
-    /// This function takes a BGR8 `Image` and converts it into an `ndarray::Array<u8, ndarray::Ix3>`.
+    /// This function takes an RGB8 `Image` and converts it into an `ndarray::Array<u8, ndarray::Ix3>`.
     /// The resulting ndarray has shape (height, width, 3).
     ///
     /// # Arguments
@@ -102,33 +100,33 @@ impl Image<'_> {
     ///
     /// # Errors
     ///
-    /// Returns an error if the `Image` is not in BGR8 format or if the pixel data cannot be reshaped
+    /// Returns an error if the `Image` is not in RGB8 format or if the pixel data cannot be reshaped
     /// into the expected ndarray format.
     ///
     /// # Example
     ///
     /// ```
-    /// use fastformat::image::Image;
+    /// use fastformat::datatypes::Image;
     ///
     /// let data = vec![0; 27]; // 3x3 image with 3 bytes per pixel
-    /// let image = Image::new_bgr8(data, 3, 3, Some("example")).unwrap();
+    /// let image = Image::new_rgb8(data, 3, 3, Some("example")).unwrap();
     ///
-    /// let ndarray = image.bgr8_into_ndarray().unwrap();
+    /// let ndarray = image.rgb8_into_ndarray().unwrap();
     /// ```
-    pub fn bgr8_into_ndarray(self) -> Result<ndarray::Array<u8, ndarray::Ix3>> {
+    pub fn rgb8_into_ndarray(self) -> Result<ndarray::Array<u8, ndarray::Ix3>> {
         match self.encoding {
-                Encoding::BGR8 => ndarray::Array::from_shape_vec(
+                Encoding::RGB8 => ndarray::Array::from_shape_vec(
                     (self.height as usize, self.width as usize, 3),
                     self.data.into_u8()?,
                 )
-                .wrap_err("Failed to reshape data into ndarray: width, height and BGR8 encoding doesn't match data data length."),
-                _ => Err(Report::msg("Image is not in BGR8 format")),
+                .wrap_err("Failed to reshape data into ndarray: width, height and RGB8 encoding doesn't match data data length."),
+                _ => Err(Report::msg("Image is not in RGB8 format")),
             }
     }
 
-    /// Converts a BGR8 `Image` into an ndarray view.
+    /// Converts an RGB8 `Image` into an ndarray view.
     ///
-    /// This function takes a reference to a BGR8 `Image` and creates an `ndarray::ArrayView<u8, ndarray::Ix3>`
+    /// This function takes a reference to an RGB8 `Image` and creates an `ndarray::ArrayView<u8, ndarray::Ix3>`
     /// over the pixel data. The resulting view has shape (height, width, 3).
     ///
     /// # Arguments
@@ -141,33 +139,33 @@ impl Image<'_> {
     ///
     /// # Errors
     ///
-    /// Returns an error if the `Image` is not in BGR8 format or if the pixel data cannot be reshaped
+    /// Returns an error if the `Image` is not in RGB8 format or if the pixel data cannot be reshaped
     /// into the expected ndarray view format.
     ///
     /// # Example
     ///
     /// ```
-    /// use fastformat::image::Image;
+    /// use fastformat::datatypes::Image;
     ///
     /// let data = vec![0; 27]; // 3x3 image with 3 bytes per pixel
-    /// let image = Image::new_bgr8(data, 3, 3, Some("example")).unwrap();
+    /// let image = Image::new_rgb8(data, 3, 3, Some("example")).unwrap();
     ///
-    /// let ndarray_view = image.bgr8_into_ndarray_view().unwrap();
+    /// let ndarray_view = image.rgb8_into_ndarray_view().unwrap();
     /// ```
-    pub fn bgr8_into_ndarray_view(&self) -> Result<ndarray::ArrayView<u8, ndarray::Ix3>> {
+    pub fn rgb8_into_ndarray_view(&self) -> Result<ndarray::ArrayView<u8, ndarray::Ix3>> {
         match self.encoding {
-                Encoding::BGR8 => ndarray::ArrayView::from_shape(
+                Encoding::RGB8 => ndarray::ArrayView::from_shape(
                     (self.height as usize, self.width as usize, 3),
                     self.data.as_u8()?,
                 )
-                .wrap_err("Failed to reshape data into ndarray: width, height and BGR8 encoding doesn't match data data length."),
-                _ => Err(Report::msg("Image is not in BGR8 format")),
+                .wrap_err("Failed to reshape data into ndarray: width, height and RGB8 encoding doesn't match data data length."),
+                _ => Err(Report::msg("Image is not in RGB8 format")),
             }
     }
 
-    /// Converts a mutable BGR8 `Image` into a mutable ndarray view.
+    /// Converts a mutable RGB8 `Image` into a mutable ndarray view.
     ///
-    /// This function takes a mutable reference to a BGR8 `Image` and creates an `ndarray::ArrayViewMut<u8, ndarray::Ix3>`
+    /// This function takes a mutable reference to an RGB8 `Image` and creates an `ndarray::ArrayViewMut<u8, ndarray::Ix3>`
     /// over the pixel data. The resulting view has shape (height, width, 3).
     ///
     /// # Arguments
@@ -180,101 +178,101 @@ impl Image<'_> {
     ///
     /// # Errors
     ///
-    /// Returns an error if the `Image` is not in BGR8 format or if the pixel data cannot be reshaped
+    /// Returns an error if the `Image` is not in RGB8 format or if the pixel data cannot be reshaped
     /// into the expected mutable ndarray view format.
     ///
     /// # Example
     ///
     /// ```
-    /// use fastformat::image::Image;
+    /// use fastformat::datatypes::Image;
     ///
     /// let data = vec![0; 27]; // 3x3 image with 3 bytes per pixel
-    /// let mut image = Image::new_bgr8(data, 3, 3, Some("example")).unwrap();
+    /// let mut image = Image::new_rgb8(data, 3, 3, Some("example")).unwrap();
     ///
-    /// let ndarray_view_mut = image.bgr8_into_ndarray_view_mut().unwrap();
+    /// let ndarray_view_mut = image.rgb8_into_ndarray_view_mut().unwrap();
     /// ```
-    pub fn bgr8_into_ndarray_view_mut(
+    pub fn rgb8_into_ndarray_view_mut(
         &mut self,
     ) -> Result<ndarray::ArrayViewMut<u8, ndarray::Ix3>> {
         match self.encoding {
-                Encoding::BGR8 => ndarray::ArrayViewMut::from_shape(
+                Encoding::RGB8 => ndarray::ArrayViewMut::from_shape(
                     (self.height as usize, self.width as usize, 3),
                     self.data.as_mut_u8()?,
                 )
-                .wrap_err("Failed to reshape data into ndarray: width, height and BGR8 encoding doesn't match data data length."),
-                _ => Err(Report::msg("Image is not in BGR8 format")),
+                .wrap_err("Failed to reshape data into ndarray: width, height and RGB8 encoding doesn't match data data length."),
+                _ => Err(Report::msg("Image is not in RGB8 format")),
             }
     }
 }
 
 mod tests {
     #[test]
-    fn test_bgr8_creation() {
-        use crate::image::Image;
+    fn test_rgb8_creation() {
+        use crate::datatypes::Image;
 
         let flat_image = vec![0; 27];
 
-        Image::new_bgr8(flat_image, 3, 3, Some("camera.test")).unwrap();
+        Image::new_rgb8(flat_image, 3, 3, Some("camera.test")).unwrap();
     }
 
     #[test]
-    fn test_bgr8_from_ndarray() {
+    fn test_rgb8_from_ndarray() {
         use ndarray::Array3;
 
-        use crate::image::Image;
+        use crate::datatypes::Image;
 
         let array = Array3::<u8>::zeros((3, 3, 3));
 
-        Image::bgr8_from_ndarray(array, Some("camera.test")).unwrap();
+        Image::rgb8_from_ndarray(array, Some("camera.test")).unwrap();
     }
 
     #[test]
-    fn test_bgr8_into_ndarray() {
-        use crate::image::Image;
+    fn test_rgb8_into_ndarray() {
+        use crate::datatypes::Image;
 
         let flat_image = vec![0; 27];
 
-        let image = Image::new_bgr8(flat_image, 3, 3, Some("camera.test")).unwrap();
+        let image = Image::new_rgb8(flat_image, 3, 3, Some("camera.test")).unwrap();
 
-        image.bgr8_into_ndarray().unwrap();
+        image.rgb8_into_ndarray().unwrap();
     }
 
     #[test]
-    fn test_bgr8_into_ndarray_view() {
-        use crate::image::Image;
+    fn test_rgb8_into_ndarray_view() {
+        use crate::datatypes::Image;
 
         let flat_image = vec![0; 27];
 
-        let image = Image::new_bgr8(flat_image, 3, 3, Some("camera.test")).unwrap();
+        let image = Image::new_rgb8(flat_image, 3, 3, Some("camera.test")).unwrap();
 
-        image.bgr8_into_ndarray_view().unwrap();
+        image.rgb8_into_ndarray_view().unwrap();
     }
 
     #[test]
-    fn test_bgr8_into_ndarray_view_mut() {
-        use crate::image::Image;
+    fn test_rgb8_into_ndarray_view_mut() {
+        use crate::datatypes::Image;
 
         let flat_image = vec![0; 27];
 
-        let mut image = Image::new_bgr8(flat_image, 3, 3, Some("camera.test")).unwrap();
+        let mut image = Image::new_rgb8(flat_image, 3, 3, Some("camera.test")).unwrap();
 
-        image.bgr8_into_ndarray_view_mut().unwrap();
+        image.rgb8_into_ndarray_view_mut().unwrap();
     }
 
     #[test]
-    fn test_bgr8_ndarray_zero_copy_conversion() {
-        use crate::image::Image;
+    fn test_rgb8_ndarray_zero_copy_conversion() {
+        use crate::datatypes::Image;
 
         let flat_image = vec![0; 27];
         let original_buffer_address = flat_image.as_ptr() as *const u64;
 
-        let bgr8_image = Image::new_bgr8(flat_image, 3, 3, None).unwrap();
-        let image_buffer_address = bgr8_image.data.as_ptr();
+        let rgb8_image = Image::new_rgb8(flat_image, 3, 3, None).unwrap();
+        let image_buffer_address = rgb8_image.data.as_ptr();
 
-        let bgr8_ndarray = bgr8_image.bgr8_into_ndarray().unwrap();
-        let ndarray_buffer_address = bgr8_ndarray.as_ptr() as *const u64;
+        let rgb8_ndarray = rgb8_image.rgb8_into_ndarray().unwrap();
+        let ndarray_buffer_address = rgb8_ndarray.as_ptr() as *const u64;
 
-        let final_image = Image::bgr8_from_ndarray(bgr8_ndarray, None).unwrap();
+        let final_image = Image::rgb8_from_ndarray(rgb8_ndarray, None).unwrap();
         let final_image_buffer_address = final_image.data.as_ptr();
 
         assert_eq!(original_buffer_address, image_buffer_address);

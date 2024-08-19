@@ -123,7 +123,7 @@ impl BBox<'_> {
 mod tests {
     #[test]
     fn test_xyxy_into_xywh() {
-        use crate::bbox::BBox;
+        use crate::datatypes::BBox;
 
         let flat_bbox = vec![1.0, 1.0, 2.0, 2.0];
         let confidence = vec![0.98];
@@ -140,7 +140,7 @@ mod tests {
 
     #[test]
     fn test_xywh_into_xyxy() {
-        use crate::bbox::BBox;
+        use crate::datatypes::BBox;
 
         let flat_bbox = vec![1.0, 1.0, 1.0, 1.0];
         let confidence = vec![0.98];

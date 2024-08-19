@@ -1,7 +1,7 @@
 use dora_node_api::{self, DoraNode, Event};
 use std::time::{Duration, Instant};
 
-use fastformat::image::Image;
+use fastformat::datatypes::Image;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (_node, mut events) = DoraNode::init_from_env()?;

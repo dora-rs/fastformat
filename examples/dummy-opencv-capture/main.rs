@@ -1,6 +1,6 @@
 extern crate fastformat;
 
-use fastformat::image::Image;
+use fastformat::datatypes::Image;
 
 fn camera_read() -> ndarray::Array<u8, ndarray::Ix3> {
     // Dummy camera read

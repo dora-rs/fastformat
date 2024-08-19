@@ -78,7 +78,7 @@ impl<'a> BBox<'a> {
 mod tests {
     #[test]
     fn test_arrow_zero_copy_conversion() {
-        use crate::bbox::BBox;
+        use crate::datatypes::BBox;
 
         let flat_bbox = vec![1.0, 1.0, 2.0, 2.0];
         let original_buffer_address = flat_bbox.as_ptr();
@@ -104,7 +104,7 @@ mod tests {
 
     #[test]
     fn test_arrow_zero_copy_read_only() {
-        use crate::bbox::BBox;
+        use crate::datatypes::BBox;
 
         let flat_bbox = vec![1.0, 1.0, 2.0, 2.0];
         let original_buffer_address = flat_bbox.as_ptr();
@@ -127,7 +127,7 @@ mod tests {
 
     #[test]
     fn test_arrow_zero_copy_copy_on_write() {
-        use crate::bbox::BBox;
+        use crate::datatypes::BBox;
 
         let flat_bbox = vec![1.0, 1.0, 2.0, 2.0];
         let original_buffer_address = flat_bbox.as_ptr();

@@ -84,7 +84,7 @@ impl BBox<'_> {
 mod tests {
     #[test]
     fn test_xyxy_creation() {
-        use crate::bbox::BBox;
+        use crate::datatypes::BBox;
 
         let flat_bbox = vec![1.0, 1.0, 2.0, 2.0];
         let confidence = vec![0.98];
@@ -97,7 +97,7 @@ mod tests {
     fn test_xyxy_from_ndarray() {
         use ndarray::Array1;
 
-        use crate::bbox::BBox;
+        use crate::datatypes::BBox;
 
         let data = Array1::<f32>::zeros(8);
         let confidence = Array1::<f32>::ones(2);
@@ -108,7 +108,7 @@ mod tests {
 
     #[test]
     fn test_xyxy_into_ndarray() {
-        use crate::bbox::BBox;
+        use crate::datatypes::BBox;
 
         let flat_bbox = vec![1.0, 1.0, 2.0, 2.0];
         let confidence = vec![0.98];
@@ -121,7 +121,7 @@ mod tests {
 
     #[test]
     fn test_xyxy_into_ndarray_view() {
-        use crate::bbox::BBox;
+        use crate::datatypes::BBox;
 
         let flat_bbox = vec![1.0, 1.0, 2.0, 2.0];
         let confidence = vec![0.98];
@@ -134,7 +134,7 @@ mod tests {
 
     #[test]
     fn test_xyxy_into_ndarray_view_mut() {
-        use crate::bbox::BBox;
+        use crate::datatypes::BBox;
 
         let flat_bbox = vec![1.0, 1.0, 2.0, 2.0];
         let confidence = vec![0.98];
@@ -147,7 +147,7 @@ mod tests {
 
     #[test]
     fn test_xyxy_ndarray_zero_copy_conversion() {
-        use crate::bbox::BBox;
+        use crate::datatypes::BBox;
 
         let flat_bbox = vec![1.0, 1.0, 2.0, 2.0];
         let original_buffer_address = flat_bbox.as_ptr();

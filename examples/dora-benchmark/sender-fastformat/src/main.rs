@@ -4,7 +4,7 @@ use rand::Rng;
 use std::collections::HashMap;
 use std::time::Duration;
 
-use fastformat::image::Image;
+use fastformat::datatypes::Image;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let latency = DataId::from("latency".to_owned());
