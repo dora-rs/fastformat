@@ -59,6 +59,7 @@ dependencies = [
  "arrow-schema",
  "arrow-select",
  "arrow-string",
+ "pyo3",
 ]
 
 [[package]]
@@ -222,6 +223,9 @@ name = "arrow-schema"
 version = "52.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e972cd1ff4a4ccd22f86d3e53e835c2ed92e0eea6a3e8eadb72b4f1ac802cf8"
+dependencies = [
+ "bitflags 2.6.0",
+]
 
 [[package]]
 name = "arrow-select"
