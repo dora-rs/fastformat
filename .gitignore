@@ -70,3 +70,6 @@ docs/_build/
 
 # Pyenv
 .python-version
+
+# PyO3 config
+.pyo3_config
