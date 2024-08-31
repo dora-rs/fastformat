@@ -13,3 +13,7 @@ classifiers = [
 dynamic = ["version"]
 [tool.maturin]
 features = ["pyo3/extension-module"]
+
+[tool.pyright] # Optional, if you use an editor with Pyright support
+venvPath = "."
+venv = ".venv"

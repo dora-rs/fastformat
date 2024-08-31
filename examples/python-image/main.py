@@ -4,18 +4,15 @@ def main():
     print("Hello, World!")
 
     image = ffi.new_bgr8(data=[0, 0, 0], width=1, height=1, name="test")
-    ptr = image.as_ptr()
+    print (image.name(), image.as_ptr())
 
-    image2 = image.into_rgb8()
-    ptr2 = image2.as_ptr()
+    raw_data = ffi.raw_data(image.into_arrow())
+    view = ffi.view_from_raw_data(raw_data)
+    del raw_data
+    print (view.name(), view.as_ptr())
 
-    print(ptr)
-    print(ptr2)
-
-    arrow = image2.into_arrow()
-    image3 = ffi.from_arrow(arrow)
-    print(image3.name())
-
+    new_image = view.into_rgb8()
+    print (new_image.name(), new_image.as_ptr())
 
 def abc(a):
     a = None

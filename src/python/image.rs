@@ -1,13 +1,10 @@
 #![allow(clippy::borrow_deref_ref)]
 
-use std::sync::Arc;
-
+use crate::arrow::FastFormatArrowRawData;
 use crate::datatypes::Image;
-use arrow::array::{Array, ArrayData, UInt8Array, UnionArray};
+use arrow::array::ArrayData;
 use arrow::pyarrow::PyArrowType;
 use pyo3::exceptions::PyValueError;
-use pyo3::ffi::Py_None;
-use pyo3::types::{PyList, PyNone};
 use pyo3::{exceptions::PyTypeError, prelude::*};
 use pyo3::{wrap_pyfunction, wrap_pymodule};
 
@@ -16,6 +13,9 @@ pub struct PyArrowData(Option<PyArrowType<ArrayData>>);
 
 #[pyclass]
 pub struct PyImage(Option<Image<'static>>);
+
+#[pyclass]
+pub struct PyRawData(Option<FastFormatArrowRawData>);
 
 #[pymethods]
 impl PyImage {
@@ -91,6 +91,38 @@ pub fn from_arrow(array: &mut PyArrowData) -> PyResult<PyImage> {
     }
 }
 
+#[pyfunction]
+pub fn raw_data(array: &mut PyArrowData) -> PyResult<PyRawData> {
+    let array_data = array.0.take().unwrap().0;
+
+    match Image::raw_data(array_data) {
+        Ok(raw_data) => Ok(PyRawData(Some(raw_data))),
+        Err(e) => Err(PyErr::new::<PyValueError, _>(e.to_string())),
+    }
+}
+
+#[pyfunction]
+pub fn from_raw_data(raw_data: &mut PyRawData) -> PyResult<PyImage> {
+    let raw_data = raw_data.0.take().unwrap();
+
+    match Image::from_raw_data(raw_data) {
+        Ok(image) => Ok(PyImage(Some(image))),
+        Err(e) => Err(PyErr::new::<PyValueError, _>(e.to_string())),
+    }
+}
+
+#[pyfunction]
+pub unsafe fn view_from_raw_data(raw_data: &PyRawData) -> PyResult<PyImage> {
+    // Transmute is totally unsafe, in Rust. But in case of Python, I don't think it's a problem for the use case.
+    match Image::view_from_raw_data(raw_data.0.as_ref().unwrap()) {
+        Ok(image) => Ok(PyImage(Some(std::mem::transmute::<
+            Image<'_>,
+            Image<'static>,
+        >(image)))),
+        Err(e) => Err(PyErr::new::<PyValueError, _>(e.to_string())),
+    }
+}
+
 #[pymodule]
 fn image(_py: Python, m: Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyImage>()?;
@@ -98,6 +130,9 @@ fn image(_py: Python, m: Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(new_bgr8, &m)?)?;
     m.add_function(wrap_pyfunction!(new_gray8, &m)?)?;
     m.add_function(wrap_pyfunction!(from_arrow, &m)?)?;
+    m.add_function(wrap_pyfunction!(raw_data, &m)?)?;
+    m.add_function(wrap_pyfunction!(from_raw_data, &m)?)?;
+    m.add_function(wrap_pyfunction!(view_from_raw_data, &m)?)?;
 
     Ok(())
 }
