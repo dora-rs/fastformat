@@ -779,6 +779,7 @@ dependencies = [
  "eyre",
  "ndarray 0.16.1",
  "numpy",
+ "pyo3",
 ]
 
 [[package]]
@@ -789,6 +790,7 @@ dependencies = [
  "eyre",
  "fastformat-converter",
  "ndarray 0.16.1",
+ "pyo3",
 ]
 
 [[package]]
@@ -1765,6 +1767,14 @@ dependencies = [
  "pyo3-build-config",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "python-image"
+version = "0.1.0"
+dependencies = [
+ "eyre",
+ "which 6.0.3",
 ]
 
 [[package]]

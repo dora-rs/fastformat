@@ -82,3 +82,7 @@ dora-coordinator.txt
 dora-daemon.txt
 
 out/
+
+# Pyright
+
+pyrightconfig.json

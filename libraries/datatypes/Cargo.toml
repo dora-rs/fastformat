@@ -16,3 +16,4 @@ fastformat-converter = { workspace = true }
 eyre = { workspace = true }
 arrow = { workspace = true, optional = true }
 ndarray = { workspace = true, optional = true }
+pyo3 = { workspace = true, features = ["extension-module"] }

@@ -6,6 +6,7 @@ members = [
     "examples/dummy-opencv-capture",
     "examples/benchmark",
     "examples/benchmark/node",
+    "examples/python-image",
 ]
 resolver = "2"
 
@@ -26,3 +27,4 @@ arrow = "52.2.0"
 eyre = "0.6.12"
 ndarray = "0.16.1"
 numpy = "0.21.0"
+pyo3 = { version = "0.21" }

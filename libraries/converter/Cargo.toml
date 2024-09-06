@@ -18,3 +18,4 @@ arrow = { workspace = true, optional = true }
 ndarray = { workspace = true, optional = true }
 numpy = { workspace = true, optional = true }
 eyre = { workspace = true }
+pyo3 = { workspace = true, features = ["extension-module"] }

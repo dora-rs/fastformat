@@ -1,3 +1,5 @@
+use pyo3::prelude::*;
+
 use eyre::{Report, Result};
 
 use data::ImageData;
@@ -29,6 +31,11 @@ pub struct Image<'a> {
     pub encoding: Encoding,
 
     pub name: Option<String>,
+}
+
+#[pyclass]
+pub struct PyImage {
+    pub image: Image<'static>,
 }
 
 impl Image<'_> {
@@ -74,6 +81,19 @@ impl Image<'_> {
             _ => Err(Report::msg("Can't convert image to BGR8")),
         }
     }
+}
+
+#[pymethods]
+impl PyImage {}
+
+#[pymodule]
+pub fn image(_py: Python, m: Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_class::<PyImage>()?;
+
+    m.setattr("__version__", env!("CARGO_PKG_VERSION"))?;
+    m.setattr("__author__", "Dora-rs Authors")?;
+
+    Ok(())
 }
 
 mod tests {

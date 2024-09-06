@@ -1,0 +1,15 @@
+[package]
+name = "python-image"
+version.workspace = true
+edition.workspace = true
+documentation.workspace = true
+description.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+which = "6.0.3"
+eyre = { workspace = true }
+
+[build-dependencies]
+which = "6.0.3"

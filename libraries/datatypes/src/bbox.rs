@@ -1,4 +1,5 @@
 use eyre::{ContextCompat, Result};
+use pyo3::prelude::*;
 
 use encoding::Encoding;
 
@@ -20,6 +21,11 @@ pub struct BBox<'a> {
     pub confidence: Cow<'a, [f32]>,
     pub label: Vec<String>,
     pub encoding: Encoding,
+}
+
+#[pyclass]
+pub struct PyBBox {
+    pub bbox: BBox<'static>,
 }
 
 impl BBox<'_> {
@@ -104,6 +110,19 @@ impl BBox<'_> {
             Encoding::XYWH => Ok(self),
         }
     }
+}
+
+#[pymethods]
+impl PyBBox {}
+
+#[pymodule]
+pub fn bbox(_py: Python, m: Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_class::<PyBBox>()?;
+
+    m.setattr("__version__", env!("CARGO_PKG_VERSION"))?;
+    m.setattr("__author__", "Dora-rs Authors")?;
+
+    Ok(())
 }
 
 mod tests {
