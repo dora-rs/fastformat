@@ -5,7 +5,7 @@ __pycache__/
 .pytest_cache/
 *.py[cod]
 
-# C extensions
+# C extensionst
 *.so
 
 # Distribution / packaging
@@ -76,3 +76,9 @@ docs/_build/
 
 # UV
 uv.lock
+
+# Dora
+dora-coordinator.txt
+dora-daemon.txt
+
+out/

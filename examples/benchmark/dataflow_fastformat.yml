@@ -1,0 +1,16 @@
+nodes:
+  - id: sender-fastformat
+    build: cargo build -p benchmark-node --release
+    path: ../../target/release/benchmark-node
+    args: --sender
+    outputs:
+      - latency
+      - throughput
+
+  - id: receiver-fastformat
+    build: cargo build -p benchmark-node --release
+    path: ../../target/release/benchmark-node
+    args: --receiver
+    inputs:
+      latency: sender-fastformat/latency
+      throughput: sender-fastformat/throughput

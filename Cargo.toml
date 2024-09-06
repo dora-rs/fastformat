@@ -1,17 +1,28 @@
-[package]
-name = "fastformat"
+[workspace]
+members = [
+    "libraries/converter",
+    "libraries/datatypes",
+    "libraries/fastformat",
+    "examples/dummy-opencv-capture",
+    "examples/benchmark",
+    "examples/benchmark/node",
+]
+resolver = "2"
+
+[workspace.package]
 version = "0.1.0"
+description = ""
 edition = "2021"
+documentation = ""
 license = "Apache-2.0"
-description = "Fast world data converter"
+repository = "https://github.com/dora-rs/fastformat/"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-[lib]
-name = "fastformat"
-crate-type = ["cdylib", "lib"]
+[workspace.dependencies]
+fastformat-datatypes = { path = "libraries/datatypes" }
+fastformat-converter = { path = "libraries/converter" }
+fastformat = { path = "libraries/fastformat" }
 
-[dependencies]
-pyo3 = "0.21.1"
-ndarray = "0.15.4"
-arrow = "52.1.0"
+arrow = "52.2.0"
 eyre = "0.6.12"
+ndarray = "0.16.1"
+numpy = "0.21.0"
