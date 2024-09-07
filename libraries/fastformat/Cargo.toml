@@ -20,4 +20,4 @@ pyarrow = ["fastformat-converter/pyarrow"]
 [dependencies]
 fastformat-datatypes = { workspace = true }
 fastformat-converter = { workspace = true }
-pyo3 = { workspace = true, features = ["extension-module"] }
+pyo3 = { workspace = true, features = ["extension-module", "eyre"] }

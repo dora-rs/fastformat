@@ -1,20 +1,13 @@
-def test_from_import():
-    from fastformat import hello as fastformat_hello
-    from fastformat.datatypes import hello as datatypes_hello
-
-    assert fastformat_hello() == "hello fastformat"
-    assert datatypes_hello() == "hello datatypes"
-
-def test_direct_import():
-    import fastformat
-    from fastformat import datatypes
-
-    assert fastformat.hello() == "hello fastformat"
-    assert datatypes.hello() == "hello datatypes"
-
 def main():
-    test_from_import()
-    test_direct_import()
+    from fastformat.datatypes.image import new_bgr8
+    from fastformat.datatypes.image import Image
+
+    image = new_bgr8([0, 0, 0], 1, 1, "TestImage")
+
+    print(image.name())
+    print(image.width())
+    print(image.height())
+    print(image.as_ptr())
 
 if __name__ == "__main__":
     main()

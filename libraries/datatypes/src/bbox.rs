@@ -25,7 +25,7 @@ pub struct BBox<'a> {
 
 #[pyclass]
 pub struct PyBBox {
-    pub bbox: BBox<'static>,
+    pub bbox: Option<BBox<'static>>,
 }
 
 impl BBox<'_> {
@@ -113,11 +113,26 @@ impl BBox<'_> {
 }
 
 #[pymethods]
-impl PyBBox {}
+impl PyBBox {
+    pub fn into_xyxy(&mut self) -> PyResult<PyBBox> {
+        let bbox = Some(self.bbox.take().unwrap().into_xyxy()?);
+
+        Ok(PyBBox { bbox })
+    }
+
+    pub fn into_xywh(&mut self) -> PyResult<PyBBox> {
+        let bbox = Some(self.bbox.take().unwrap().into_xywh()?);
+
+        Ok(PyBBox { bbox })
+    }
+}
 
 #[pymodule]
 pub fn bbox(_py: Python, m: Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyBBox>()?;
+
+    m.add_function(wrap_pyfunction!(xyxy::new_xyxy, &m)?)?;
+    m.add_function(wrap_pyfunction!(xywh::new_xywh, &m)?)?;
 
     m.setattr("__version__", env!("CARGO_PKG_VERSION"))?;
     m.setattr("__author__", "Dora-rs Authors")?;

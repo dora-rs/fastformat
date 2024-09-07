@@ -1,4 +1,6 @@
-use super::{data::ImageData, encoding::Encoding, Image};
+use pyo3::prelude::*;
+
+use super::{data::ImageData, encoding::Encoding, Image, PyImage};
 use eyre::{Report, Result};
 
 impl Image<'_> {
@@ -45,6 +47,13 @@ impl Image<'_> {
             name: name.map(|s| s.to_string()),
         })
     }
+}
+
+#[pyfunction]
+pub fn new_rgb8(data: Vec<u8>, width: u32, height: u32, name: Option<&str>) -> PyResult<PyImage> {
+    Ok(PyImage {
+        image: Some(Image::new_rgb8(data, width, height, name)?),
+    })
 }
 
 mod tests {

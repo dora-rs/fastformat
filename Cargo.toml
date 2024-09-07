@@ -7,6 +7,7 @@ members = [
     "examples/benchmark",
     "examples/benchmark/node",
     "examples/python-image",
+    "examples/python-bbox",
 ]
 resolver = "2"
 

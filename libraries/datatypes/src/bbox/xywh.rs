@@ -1,6 +1,8 @@
+use pyo3::prelude::*;
+
 use std::borrow::Cow;
 
-use super::{encoding::Encoding, BBox};
+use super::{encoding::Encoding, BBox, PyBBox};
 use eyre::{Report, Result};
 
 impl BBox<'_> {
@@ -21,6 +23,13 @@ impl BBox<'_> {
             encoding: Encoding::XYWH,
         })
     }
+}
+
+#[pyfunction]
+pub fn new_xywh(data: Vec<f32>, confidence: Vec<f32>, label: Vec<String>) -> PyResult<PyBBox> {
+    Ok(PyBBox {
+        bbox: Some(BBox::new_xywh(data, confidence, label)?),
+    })
 }
 
 mod tests {

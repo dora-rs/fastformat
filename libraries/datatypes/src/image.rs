@@ -35,7 +35,7 @@ pub struct Image<'a> {
 
 #[pyclass]
 pub struct PyImage {
-    pub image: Image<'static>,
+    pub image: Option<Image<'static>>,
 }
 
 impl Image<'_> {
@@ -84,11 +84,41 @@ impl Image<'_> {
 }
 
 #[pymethods]
-impl PyImage {}
+impl PyImage {
+    pub fn name(&self) -> Option<&str> {
+        self.image.as_ref().unwrap().name.as_deref()
+    }
+
+    pub fn width(&self) -> u32 {
+        self.image.as_ref().unwrap().width
+    }
+
+    pub fn height(&self) -> u32 {
+        self.image.as_ref().unwrap().height
+    }
+
+    pub fn as_ptr(&self) -> u64 {
+        self.image.as_ref().unwrap().data.as_ptr() as u64
+    }
+
+    pub fn into_rgb8(&mut self) -> PyResult<PyImage> {
+        let image = Some(self.image.take().unwrap().into_rgb8()?);
+        Ok(PyImage { image })
+    }
+
+    pub fn into_bgr8(&mut self) -> PyResult<PyImage> {
+        let image = Some(self.image.take().unwrap().into_bgr8()?);
+        Ok(PyImage { image })
+    }
+}
 
 #[pymodule]
 pub fn image(_py: Python, m: Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyImage>()?;
+
+    m.add_function(wrap_pyfunction!(bgr8::new_bgr8, &m)?)?;
+    m.add_function(wrap_pyfunction!(rgb8::new_rgb8, &m)?)?;
+    m.add_function(wrap_pyfunction!(gray8::new_gray8, &m)?)?;
 
     m.setattr("__version__", env!("CARGO_PKG_VERSION"))?;
     m.setattr("__author__", "Dora-rs Authors")?;
