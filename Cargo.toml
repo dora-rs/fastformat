@@ -22,7 +22,7 @@ fastformat-datatypes = { path = "libraries/datatypes" }
 fastformat-converter = { path = "libraries/converter" }
 fastformat = { path = "libraries/fastformat" }
 
-kornia = { git = "https://github.com/kornia/kornia-rs", tag = "v0.1.6-rc2" }
+kornia = { git = "https://github.com/kornia/kornia-rs", tag = "v0.1.6-rc3" }
 arrow = "52.2.0"
 eyre = "0.6.12"
 ndarray = "0.16.1"
