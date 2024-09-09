@@ -10,9 +10,11 @@ repository.workspace = true
 [features]
 arrow = ["fastformat-converter/arrow", "dep:arrow"]
 ndarray = ["fastformat-converter/ndarray", "dep:ndarray"]
+kornia = ["fastformat-converter/kornia", "dep:kornia"]
 
 [dependencies]
 fastformat-converter = { workspace = true }
 eyre = { workspace = true }
 arrow = { workspace = true, optional = true }
 ndarray = { workspace = true, optional = true }
+kornia = { workspace = true, optional = true }
