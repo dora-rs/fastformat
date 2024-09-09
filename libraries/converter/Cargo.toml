@@ -10,6 +10,7 @@ repository.workspace = true
 [features]
 arrow = ["dep:arrow"]
 ndarray = ["dep:ndarray"]
+kornia = ["dep:kornia"]
 numpy = ["ndarray", "dep:numpy"]
 pyarrow = ["arrow"]
 
@@ -18,3 +19,4 @@ arrow = { workspace = true, optional = true }
 ndarray = { workspace = true, optional = true }
 numpy = { workspace = true, optional = true }
 eyre = { workspace = true }
+kornia = { workspace = true, optional = true }
