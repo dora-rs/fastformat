@@ -2,7 +2,7 @@ use eyre::{Report, Result};
 
 use std::fmt::Display;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Encoding {
     RGB8,
     BGR8,

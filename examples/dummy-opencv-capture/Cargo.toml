@@ -1,0 +1,12 @@
+[package]
+name = "dummy-opencv-capture"
+version.workspace = true
+edition.workspace = true
+documentation.workspace = true
+description.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+fastformat = { workspace = true, features = ["arrow", "ndarray"] }
+arrow = { workspace = true }
