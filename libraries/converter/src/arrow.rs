@@ -8,6 +8,7 @@ pub struct FastFormatArrowRawData {
     array_data: HashMap<String, arrow::array::ArrayData>,
 }
 
+#[derive(Default)]
 pub struct FastFormatArrowBuilder {
     union_children: Vec<arrow::array::ArrayRef>,
     union_fields: Vec<(i8, arrow::datatypes::FieldRef)>,
@@ -262,10 +263,7 @@ impl FastFormatArrowRawData {
 
 impl FastFormatArrowBuilder {
     pub fn new() -> Self {
-        Self {
-            union_children: Vec::new(),
-            union_fields: Vec::new(),
-        }
+        Self::default()
     }
 
     pub fn push_primitive_singleton<T: arrow::datatypes::ArrowPrimitiveType>(

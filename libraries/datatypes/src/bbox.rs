@@ -7,10 +7,8 @@ use std::borrow::Cow;
 mod xywh;
 mod xyxy;
 
-#[cfg(feature = "arrow")]
 mod arrow;
 
-#[cfg(feature = "ndarray")]
 mod ndarray;
 
 mod encoding;

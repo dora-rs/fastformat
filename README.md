@@ -36,7 +36,7 @@ This independent library enables **simple and fast** data conversion between for
 
 ```Cargo.toml
 [dependencies]
-fastformat = { version = "0.1.0", features = ["arrow", "numpy", "ndarray", "pyarrow"] }
+fastformat = { version = "0.1.0" }
 ```
 
 ### Python

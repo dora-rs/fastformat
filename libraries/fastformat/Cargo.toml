@@ -11,14 +11,8 @@ repository.workspace = true
 name = "fastformat"
 crate-type = ["cdylib", "lib"]
 
-[features]
-arrow = ["fastformat-datatypes/arrow", "fastformat-converter/arrow"]
-ndarray = ["fastformat-datatypes/ndarray", "fastformat-converter/ndarray"]
-numpy = ["fastformat-converter/numpy"]
-pyarrow = ["fastformat-converter/pyarrow"]
-
 [dependencies]
 fastformat-datatypes = { workspace = true }
 fastformat-converter = { workspace = true }
 
-pyo3 = { version = "0.21", features = ["extension-module"], optional = true }
+pyo3 = { version = "0.21", features = ["extension-module"] }

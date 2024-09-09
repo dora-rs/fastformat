@@ -7,14 +7,8 @@ description.workspace = true
 license.workspace = true
 repository.workspace = true
 
-[features]
-arrow = ["dep:arrow"]
-ndarray = ["dep:ndarray"]
-numpy = ["ndarray", "dep:numpy"]
-pyarrow = ["arrow"]
 
 [dependencies]
-arrow = { workspace = true, optional = true }
-ndarray = { workspace = true, optional = true }
-numpy = { workspace = true, optional = true }
+arrow = { workspace = true }
+ndarray = { workspace = true }
 eyre = { workspace = true }

@@ -32,7 +32,7 @@ jobs:
           cache-directories: ${{ env.CARGO_TARGET_DIR }}
 
       - name: "Check"
-        run: cargo check --all --all-features
+        run: cargo check --all
 
   clippy:
     name: "Clippy"
@@ -44,7 +44,7 @@ jobs:
       - run: cargo --version --verbose
 
       - name: "Clippy"
-        run: cargo clippy --all --all-features
+        run: cargo clippy --all
   rustfmt:
     name: "Formatting"
     runs-on: ubuntu-latest

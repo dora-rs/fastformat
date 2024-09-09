@@ -8,5 +8,5 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-fastformat = { workspace = true, features = ["arrow", "ndarray"] }
+fastformat = { workspace = true }
 arrow = { workspace = true }

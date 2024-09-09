@@ -7,13 +7,10 @@ mod bgr8;
 mod gray8;
 mod rgb8;
 
-#[cfg(feature = "arrow")]
 mod arrow;
 
-#[cfg(feature = "ndarray")]
 mod ndarray;
 
-#[cfg(feature = "ndarray")]
 pub use ndarray::{NdarrayImage, NdarrayImageView, NdarrayImageViewMut};
 
 mod data;

@@ -44,7 +44,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist --find-interpreter --manifest-path libraries/fastformat/Cargo.toml --all-features
+          args: --release --out dist --find-interpreter --manifest-path libraries/fastformat/Cargo.toml
           sccache: "true"
           manylinux: auto
       - name: Upload wheels
@@ -73,7 +73,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist --find-interpreter --manifest-path libraries/fastformat/Cargo.toml --all-features
+          args: --release --out dist --find-interpreter --manifest-path libraries/fastformat/Cargo.toml
           sccache: "true"
           manylinux: musllinux_1_2
       - name: Upload wheels
@@ -108,7 +108,7 @@ jobs:
           target: ${{ matrix.platform.target }}
           manylinux: auto
           container: off
-          args: --release -o dist -i 3.8 --manifest-path libraries/fastformat/Cargo.toml --all-features
+          args: --release -o dist -i 3.8 --manifest-path libraries/fastformat/Cargo.toml
       - name: Upload wheels
         uses: actions/upload-artifact@v3
         with:
@@ -134,7 +134,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist --find-interpreter --manifest-path libraries/fastformat/Cargo.toml --all-features
+          args: --release --out dist --find-interpreter --manifest-path libraries/fastformat/Cargo.toml
           sccache: "true"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
@@ -160,7 +160,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist --find-interpreter --manifest-path libraries/fastformat/Cargo.toml --all-features
+          args: --release --out dist --find-interpreter --manifest-path libraries/fastformat/Cargo.toml
           sccache: "true"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
