@@ -32,11 +32,7 @@ jobs:
           cache-directories: ${{ env.CARGO_TARGET_DIR }}
 
       - name: "Check"
-        run: cargo check --all
-      - name: "Build  (Without Python node as it is build with maturin)"
-        run: cargo build --all --exclude dora-node-api-python
-      - name: "Test"
-        run: cargo test --all --exclude dora-ros2-bridge-python
+        run: cargo check --all --all-features
 
   clippy:
     name: "Clippy"
@@ -48,14 +44,7 @@ jobs:
       - run: cargo --version --verbose
 
       - name: "Clippy"
-        run: cargo clippy --all
-      - name: "Clippy (tracing feature)"
-        run: cargo clippy --all --features tracing
-        if: false # only the dora-runtime has this feature, but it is currently commented out
-      - name: "Clippy (metrics feature)"
-        run: cargo clippy --all --features metrics
-        if: false # only the dora-runtime has this feature, but it is currently commented out
-
+        run: cargo clippy --all --all-features
   rustfmt:
     name: "Formatting"
     runs-on: ubuntu-latest

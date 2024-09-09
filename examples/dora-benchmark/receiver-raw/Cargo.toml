@@ -1,9 +1,0 @@
-[package]
-name = "dora-benchmark-receiver-raw"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-dora-node-api = "0.3.5"
-arrow = "52.1.0"
-fastformat = { path = "../../../../fastformat" }

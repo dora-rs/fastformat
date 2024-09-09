@@ -1,0 +1,16 @@
+nodes:
+  - id: sender-raw
+    build: cargo build -p benchmark-node --release
+    path: ../../target/release/benchmark-node
+    args: --sender --raw
+    outputs:
+      - latency
+      - throughput
+
+  - id: receiver-raw
+    build: cargo build -p benchmark-node --release
+    path: ../../target/release/benchmark-node
+    args: --receiver --raw
+    inputs:
+      latency: sender-raw/latency
+      throughput: sender-raw/throughput
