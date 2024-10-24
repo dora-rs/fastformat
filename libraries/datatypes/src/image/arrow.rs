@@ -1,10 +1,11 @@
 use fastformat_converter::arrow::{
-    builder::ArrowDataBuilder, consumer::ArrowDataConsumer, IntoArrow,
+    builder::ArrowDataBuilder, consumer::ArrowDataConsumer, viewer::ArrowDataViewer, IntoArrow,
+    ViewArrow,
 };
 
 use super::{data::ImageData, encoding::Encoding, Image};
 
-impl<'a> IntoArrow for Image<'a> {
+impl IntoArrow for Image<'_> {
     /// Converts an `Image` into Arrow `ArrayData`.
     ///
     /// This function serializes the image metadata and pixel data into Arrow format, allowing
@@ -80,10 +81,57 @@ impl<'a> IntoArrow for Image<'a> {
     }
 }
 
+impl<'a> ViewArrow<'a> for Image<'a> {
+    fn viewer(
+        array_data: arrow::array::ArrayData,
+    ) -> eyre::Result<fastformat_converter::arrow::viewer::ArrowDataViewer> {
+        let viewer = ArrowDataViewer::new(array_data)?;
+
+        let encoding = Encoding::from_string(viewer.utf8_singleton("encoding")?)?;
+
+        match encoding {
+            Encoding::BGR8 | Encoding::RGB8 | Encoding::GRAY8 => {
+                viewer.load_primitive::<arrow::datatypes::UInt8Type>("data")
+            }
+        }
+    }
+
+    fn view_arrow(viewer: &'a ArrowDataViewer) -> eyre::Result<Self>
+    where
+        Self: Sized,
+    {
+        let width = viewer.primitive_singleton::<arrow::datatypes::UInt32Type>("width")?;
+        let height = viewer.primitive_singleton::<arrow::datatypes::UInt32Type>("height")?;
+        let encoding = viewer.utf8_singleton("encoding")?;
+        let name = viewer.utf8_singleton("name")?;
+
+        let name = match name.as_str() {
+            "" => None,
+            _ => Some(name),
+        };
+        let encoding = Encoding::from_string(encoding)?;
+
+        let data = match encoding {
+            Encoding::RGB8 | Encoding::BGR8 | Encoding::GRAY8 => {
+                viewer.primitive_array::<arrow::datatypes::UInt8Type>("data")?
+            }
+        };
+
+        Ok(Self {
+            width,
+            height,
+            encoding,
+            name,
+            data: ImageData::from_slice_u8(data),
+        })
+    }
+}
+
 mod tests {
     #[test]
     fn test_arrow_zero_copy_conversion() {
         use crate::image::Image;
+        use fastformat_converter::arrow::IntoArrow;
 
         let flat_image = vec![0; 27];
         let original_buffer_address = flat_image.as_ptr() as *const u64;
@@ -107,6 +155,7 @@ mod tests {
     #[test]
     fn test_arrow_zero_copy_read_only() {
         use crate::image::Image;
+        use fastformat_converter::arrow::{IntoArrow, ViewArrow};
 
         let flat_image = vec![0; 27];
         let original_buffer_address = flat_image.as_ptr() as *const u64;
@@ -116,8 +165,8 @@ mod tests {
 
         let arrow_image = bgr8_image.into_arrow().unwrap();
 
-        let raw_data = Image::raw_data(arrow_image).unwrap();
-        let new_image = Image::view_from_raw_data(&raw_data).unwrap();
+        let raw_data = Image::viewer(arrow_image).unwrap();
+        let new_image = Image::view_arrow(&raw_data).unwrap();
 
         let final_image_buffer = new_image.data.as_ptr();
 
@@ -128,6 +177,7 @@ mod tests {
     #[test]
     fn test_arrow_zero_copy_copy_on_write() {
         use crate::image::Image;
+        use fastformat_converter::arrow::{IntoArrow, ViewArrow};
 
         let flat_image = vec![0; 27];
         let original_buffer_address = flat_image.as_ptr() as *const u64;
@@ -137,8 +187,8 @@ mod tests {
 
         let arrow_image = bgr8_image.into_arrow().unwrap();
 
-        let raw_data = Image::raw_data(arrow_image).unwrap();
-        let bgr8_image = Image::view_from_raw_data(&raw_data).unwrap();
+        let raw_data = Image::viewer(arrow_image).unwrap();
+        let bgr8_image = Image::view_arrow(&raw_data).unwrap();
         let rgb8_image = bgr8_image.into_rgb8().unwrap();
 
         let final_image_buffer = rgb8_image.data.as_ptr();

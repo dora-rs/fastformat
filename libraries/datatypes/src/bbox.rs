@@ -8,7 +8,6 @@ mod xywh;
 mod xyxy;
 
 mod arrow;
-mod ndarray;
 
 mod encoding;
 

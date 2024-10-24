@@ -8,8 +8,6 @@ mod gray8;
 mod rgb8;
 
 mod arrow;
-mod ndarray;
-pub use ndarray::{NdarrayImage, NdarrayImageView, NdarrayImageViewMut};
 
 mod data;
 pub mod encoding;

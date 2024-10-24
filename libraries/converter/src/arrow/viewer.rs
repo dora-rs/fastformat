@@ -112,10 +112,7 @@ impl ArrowDataViewer {
         })
     }
 
-    pub fn load_utf8<T: arrow::datatypes::ArrowPrimitiveType>(
-        self,
-        field: &str,
-    ) -> eyre::Result<Self> {
+    pub fn load_utf8(self, field: &str) -> eyre::Result<Self> {
         let mut array_data = self.array_data;
         let mut buffers = self.buffers;
         let mut offset_buffers = self.offset_buffers;
@@ -152,7 +149,34 @@ impl ArrowDataViewer {
         Ok(slice)
     }
 
-    pub fn utf8_array(&mut self, _field: &str) -> eyre::Result<Vec<String>> {
-        Err(eyre::eyre!("Not implemented"))
+    pub fn utf8_array(&self, field: &str) -> eyre::Result<Vec<String>> {
+        let buffer = self.buffers.get(field).ok_or_eyre(eyre::eyre!(format!(
+            "Invalid field {} for this map of data",
+            field
+        )))?;
+
+        let offset_buffer = self
+            .offset_buffers
+            .get(field)
+            .ok_or_eyre(eyre::eyre!(format!(
+                "Invalid field {} for this map of data",
+                field
+            )))?;
+
+        let slice = buffer.as_slice();
+        let mut iterator = offset_buffer.iter();
+        iterator.next();
+
+        let mut last_offset = 0;
+
+        iterator
+            .map(|&offset| {
+                let offset = offset as usize;
+                let slice = &slice[last_offset..offset];
+                last_offset = offset;
+
+                String::from_utf8(slice.to_vec()).map_err(|e| eyre::eyre!(e))
+            })
+            .collect::<eyre::Result<Vec<String>>>()
     }
 }
