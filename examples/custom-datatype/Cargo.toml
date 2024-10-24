@@ -1,15 +1,13 @@
 [package]
-name = "fastformat-datatypes"
+name = "custom-datatype"
 version.workspace = true
+description.workspace = true
 edition.workspace = true
 documentation.workspace = true
-description.workspace = true
 license.workspace = true
 repository.workspace = true
 
 [dependencies]
-fastformat-converter = { workspace = true }
-
+fastformat = { workspace = true }
 arrow = { workspace = true }
-ndarray = { workspace = true }
 eyre = { workspace = true }

@@ -2,25 +2,27 @@
 members = [
     "libraries/converter",
     "libraries/datatypes",
-    "libraries/fastformat",
-    "examples/dummy-opencv-capture",
-    "examples/benchmark",
-    "examples/benchmark/node",
+
+    "apis/rust",
+
+    "examples/custom-datatype",
 ]
 resolver = "2"
 
 [workspace.package]
 version = "0.1.0"
-description = ""
+description = "FastFormat is a Rust library for fast and efficient data serialization and deserialization with Arrow format."
 edition = "2021"
 documentation = ""
 license = "Apache-2.0"
 repository = "https://github.com/dora-rs/fastformat/"
 
 [workspace.dependencies]
-fastformat-datatypes = { path = "libraries/datatypes" }
 fastformat-converter = { path = "libraries/converter" }
-fastformat = { path = "libraries/fastformat" }
+fastformat-core = { path = "libraries/core" }
+fastformat-datatypes = { path = "libraries/datatypes" }
+
+fastformat = { path = "apis/rust" }
 
 arrow = "52.2.0"
 eyre = "0.6.12"

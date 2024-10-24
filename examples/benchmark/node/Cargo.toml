@@ -8,9 +8,9 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-fastformat = { workspace = true, features = ["arrow"] }
 arrow = { workspace = true }
 eyre = { workspace = true }
+
 clap = { version = "4.5.17", features = ["derive"] }
 rand = "0.8.5"
 dora-node-api = "0.3.6"
