@@ -42,18 +42,15 @@ impl ArrowDataViewer {
     }
 
     pub fn primitive_singleton<T: arrow::datatypes::ArrowPrimitiveType>(
-        &mut self,
+        &self,
         field: &str,
     ) -> eyre::Result<T::Native> {
-        let data = self
-            .array_data
-            .remove(field)
-            .ok_or_eyre(eyre::eyre!(format!(
-                "Invalid field {} for this map of data",
-                field
-            )))?;
+        let data = self.array_data.get(field).ok_or_eyre(eyre::eyre!(format!(
+            "Invalid field {} for this map of data",
+            field
+        )))?;
 
-        let array = arrow::array::PrimitiveArray::<T>::from(data);
+        let array = arrow::array::PrimitiveArray::<T>::from(data.clone());
         let (_, buffer, _) = array.into_parts();
 
         let inner = buffer.into_inner();
@@ -66,16 +63,13 @@ impl ArrowDataViewer {
         )))
     }
 
-    pub fn utf8_singleton(&mut self, field: &str) -> eyre::Result<String> {
-        let data = self
-            .array_data
-            .remove(field)
-            .ok_or_eyre(eyre::eyre!(format!(
-                "Invalid field {} for this map of data",
-                field
-            )))?;
+    pub fn utf8_singleton(&self, field: &str) -> eyre::Result<String> {
+        let data = self.array_data.get(field).ok_or_eyre(eyre::eyre!(format!(
+            "Invalid field {} for this map of data",
+            field
+        )))?;
 
-        let array = arrow::array::StringArray::from(data);
+        let array = arrow::array::StringArray::from(data.clone());
         let (offset_buffer, buffer, _) = array.into_parts();
 
         let slice = buffer.as_slice();

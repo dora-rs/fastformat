@@ -1,34 +1,93 @@
-## Project Objective
+# 🚀 **fastformat: High-Performance Data Processing Library**
 
-The goal is to create an efficient way to reconstruct and process data in real-time, in specific formats like NDarray,
-Numpy, or Arrow, without unnecessary copies.
+[![Build Status](https://img.shields.io/github/workflow/status/dora-rs/fastformat/CI)](https://github.com/dora-rs/fastformat/actions)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Version](https://img.shields.io/github/v/tag/dora-rs/fastformat)](https://github.com/dora-rs/fastformat/tags)
 
-- **Independent Library**: We are creating an independent library for our formats, which everyone could use even without
-  DORA. The current name is fastformat: <https://github.com/dora-rs/fastformat>
+## 🎯 **Project Objective**
 
-- **Agnosticism**: We want our solution to be agnostic to Arrow, meaning it can work with Numpy and other data types
-  easily by implementing to_[format] functions.
+The goal of **fastformat** is to build an **efficient**, **real-time** data processing library that supports formats like **NDarray**, **Numpy**, and **Arrow**, without unnecessary data copies. ⚡
 
-- **Rust and Python Code**: The main implementation will be in Rust for performance and portability reasons, with a
-  Python interface using PyO3. This will allow for fast vector manipulation and potentially GPU support in the future.
+This independent library enables **simple and fast** data conversion between formats, ensuring optimal performance across various platforms.
 
-- **Portability and Dependencies**: By using Rust, we aim to minimize dependencies and maximize portability. This will
-  allow us to achieve optimal performance across different platforms.
+🌟 Key features of **fastformat**:
+- **💼 Independent Library**: Usable with or without [**DORA**](https://github.com/dora-rs). Find the repo [here](https://github.com/dora-rs/fastformat).
+- **🌐 Agnostic Format**: The library is designed to support various data formats like **Numpy**, **Arrow**, and others, with conversion through `into_[format]` functions.
+- **🦀 Rust & 🐍 Python Integration**: The core is implemented in **Rust** for speed and portability, with a Python interface using **PyO3** for ease of use and compatibility.
+- **📦 Minimal Dependencies**: Built with **Rust**, fastformat ensures minimal external dependencies and maximum cross-platform compatibility.
+- **🔄 Simplicity in Conversion**: fastformat doesn’t aim to handle complex data operations on its own. Instead, it provides a simple interface to wrap and convert data types efficiently, leaving complex operations to other specialized projects.
 
-- **Simplicity**: The goal is not to create yet another library for creating formats to store/process data. The aim here
-  is to create a simple interface to wrap data from one type and convert it to another.
+> **Note**: fastformat is **not** designed to be a fully-featured API for performing advanced operations on specific data types. Instead, it focuses on providing **simple interfaces** for handling data representations in various formats.
 
-## DataTypes
+---
 
-- **Image**: (Arrow representation is a **UnionArray**),
-    - Field "data": UintXArray (e.g [0, 255, 0, 255, 0, 255, ...])
-    - Field "width": Uint32Array (e.g [1280])
-    - Field "height": Uint32Array (e.g [720])
-    - Field "encoding": StringArray (e.g ["RGB8"])
-    - Field "name" (Optional): StringArray (e.g,["image.front_camera"] or [None])
+## 💻 **Technology Stack**
 
-- **BBox**: (Arrow representation is a **UnionArray**),
-    - Field "data": Float32Array (e.g [0.0f32, 1.0f32, ...])
-    - Field "confidence": Float32Array (e.g [0.98f32, 0.76f32, ...])
-    - Field "label": StringArray (e.g ["cat", "car", ..."])
-    - Field "encoding": StringArray (e.g ["XYXY"] or ["XYWH"])
+- **Rust** 🦀 for core functionality and high-performance processing.
+- **PyO3** 🐍 for seamless integration with Python.
+- **Arrow** 🏹 for powerful in-memory data representation.
+- **Kornia-rs** 🖼️ as an **OpenCV replacement** in Rust for advanced image processing when needed.
+
+---
+
+## 🚧 **Installation Instructions**
+
+### Rust
+
+```Cargo.toml
+[dependencies]
+fastformat = { version = "0.1.0" }
+```
+
+### Python
+
+Every `pip-compatible` package manager can be used to install **fastformat**. Here’s an example using `pip`:
+
+```bash
+pip install fastformat
+```
+
+**Note**: We encourage using `uv pip` inside a virtual environment to avoid conflicts with system packages.
+
+---
+
+## 📚 **Usage Example**
+
+Here’s a simple example of how to use **fastformat** to convert data formats:
+
+```python
+import fastformat
+
+# Create a Rust/Python native Image
+my_image = fastformat.datatypes.image.new_rgb8([0, 0, 0], 1, 1, "My Image")
+
+# Example: Convert NDarray to Arrow
+arrow_data = my_image.into_arrow()
+
+# Example: Convert Arrow to Numpy
+numpy_data = my_image.into_numpy()
+```
+
+---
+
+## 📦 **Future Plans**
+
+- GPU Support for faster processing with **CUDA** ⚡
+- Extend support to more formats (e.g. **Torch Tensors**, **Pandas DataFrames**).
+- Add support for **multithreading** and **distributed computing**.
+
+---
+
+## 🙌 **Contributing**
+
+We welcome contributions! Feel free to submit issues or pull requests. Check the [CONTRIBUTING](CONTRIBUTING.md) guide for more information.
+
+---
+
+## 📜 **License**
+
+This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
+
+---
+
+🚀 Happy coding with **fastformat**!

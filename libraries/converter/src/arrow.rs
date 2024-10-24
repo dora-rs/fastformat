@@ -11,9 +11,9 @@ pub trait IntoArrow {
         Self: Sized;
 }
 
-pub trait ViewArrow {
+pub trait ViewArrow<'a> {
     fn viewer(array_data: arrow::array::ArrayData) -> eyre::Result<ArrowDataViewer>;
-    fn view_arrow<'a>(viewer: &'a ArrowDataViewer) -> eyre::Result<Self>
+    fn view_arrow(viewer: &'a ArrowDataViewer) -> eyre::Result<Self>
     where
         Self: Sized;
 }

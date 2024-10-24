@@ -403,6 +403,7 @@ name = "fastformat"
 version = "0.1.0"
 dependencies = [
  "fastformat-converter",
+ "fastformat-derive",
 ]
 
 [[package]]
@@ -421,6 +422,14 @@ dependencies = [
  "eyre",
  "fastformat-converter",
  "ndarray",
+]
+
+[[package]]
+name = "fastformat-derive"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -849,9 +858,9 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "syn"
-version = "2.0.77"
+version = "2.0.85"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f35bcdf61fd8e7be6caf75f429fdca8beb3ed76584befb503b1569faee373ed"
+checksum = "5023162dfcd14ef8f32034d8bcd4cc5ddc61ef7a247c024a33e24e1f24d21b56"
 dependencies = [
  "proc-macro2",
  "quote",

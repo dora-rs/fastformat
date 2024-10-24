@@ -4,6 +4,7 @@ members = [
     "libraries/datatypes",
 
     "apis/rust",
+    "apis/rust-derive",
 
     "examples/custom-datatype",
 ]
@@ -23,6 +24,7 @@ fastformat-core = { path = "libraries/core" }
 fastformat-datatypes = { path = "libraries/datatypes" }
 
 fastformat = { path = "apis/rust" }
+fastformat-derive = { path = "apis/rust-derive" }
 
 arrow = "52.2.0"
 eyre = "0.6.12"
